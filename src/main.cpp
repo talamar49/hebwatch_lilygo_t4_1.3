@@ -42,19 +42,36 @@ enum
 typedef struct cal_data_ty
 {
   String city;
-  String days[DAYS_IN_WEEK];
   String curr_juldate[DATE_ELEMENTS];
   String curr_hebdate[DATE_ELEMENTS];
-  String juldays[DAYS_IN_WEEK];
-  String hebdays[DAYS_IN_WEEK];
+  String juldates[DAYS_IN_WEEK];
+  String hebdates[DAYS_IN_WEEK];
   String sunrise[DAYS_IN_WEEK];
   String sunset[DAYS_IN_WEEK];
   String alot[DAYS_IN_WEEK];
+  String shma[DAYS_IN_WEEK];
+  String hatzot[DAYS_IN_WEEK];
+  String plag[DAYS_IN_WEEK];
+  String shabat_start;
+  String shabat_end;
+  String shabat_tam;
 }cal_data_ty;
 
 void WriteString(const String &string, int32_t x, int32_t y, const uint8_t *font, int is_RTL);
 void WriteToCols(String str_arr[], int32_t x, int32_t y, const uint8_t *font, int is_RTL);
 void DrawColLine(int x);
+
+void UpdateHebdates(String hebdates[]);
+void UpdateJuldates(String juldates[]);
+void UpdateSunrise(String sunrises[]);
+void UpdateSunset(String sunsets[]);
+void UpdateAlot(String alots[]);
+void UpdatePlag(String plags[]);
+void UpdateShma(String shmas[]);
+void UpdateHatzot(String hatzots[]);
+void UpdateShabat(String shabat_start, String shabat_end, String shabat_tam);
+
+
 
 enum
 {
@@ -136,16 +153,40 @@ void InitSetup(void)
   attachInterrupt(digitalPinToInterrupt(left_pin), ChooseLeft, FALLING);
 }
 
+void UpdateCurrHebdate(String curr_hebdate[])
+{
+  String hebdate = curr_hebdate[0]+" "+curr_hebdate[1]+" "+curr_hebdate[2];
+  WriteString(hebdate, TFT_WIDTH - 1, 25, Rubik_Light14 , RTL);
+}
+
+void UpdateCurrJuldate(String curr_juldate[])
+{
+  String juldate = curr_juldate[0]+"/"+curr_juldate[1]+"/"+curr_juldate[2];
+  WriteString(juldate, 62, 25, Rubik_Light14 , LTR);
+}
+
+void UpdateHebtime(const String &hebtime)
+{
+  WriteString(hebtime, 147, 5, Rubik_Light26, LTR);
+}
+
+void UpdateStandardTime(const String &standardtime)
+{
+  WriteString(standardtime, 70, 5, Rubik_Light26, LTR);
+}
+
+void UpdateCity(const String &city)
+{
+  WriteString(city, 58, 10, Rubik_Light20, RTL);
+}
 
 void InitTFT(void)
 {
   
   tft.init();
-  int bg = TFT_DARKCYAN;
-  int fg = TFT_SILVER;
 
-  tft.setTextColor(fg, bg);
-  tft.fillScreen(bg);
+  tft.setTextColor(TFT_SILVER, TFT_DARKCYAN);
+  tft.fillScreen(TFT_DARKCYAN);
 
   TFTCreateUIFrame();
 
@@ -155,80 +196,125 @@ void InitTFT(void)
   String standardtime = "20:46";
   String curr_hebdate[] = {"כה","ניסן","תשפד"};
   String curr_juldate[] = {"12","04","2024"};
+  String hebdates[] = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
+  String juldates[] = {"12", "13", "14", "15", "16","17","18"};
+  String sunrise[] = {"06:42", "06:43", "06:45", "06:48", "06:48","06:50","06:51"};
+  String alot[] = {"00:00", "05:03", "05:05", "05:08", "05:08","05:09","05:11"};
+  String sunset[] = {"19:12", "19:11", "19:09", "19:08", "19:08","19:07","19:05"};
+  String shma[] = {"08:15", "08:16", "08:18", "08:20", "08:21","08:22","08:25"};
+  String hatzot[] = {"12:23", "12:24", "12:25", "12:27", "12:29","12:30","12:31"};
+  String plag[] = {"16:20", "16:21", "16:21", "16:21", "16:22","16:23","16:25"};
+  cal.shabat_start = "18:52";
+  cal.shabat_end = "20:01";
+  cal.shabat_tam = "20:40";
 
   memcpy(cal.curr_hebdate, curr_hebdate, sizeof(String) * DATE_ELEMENTS);
   memcpy(cal.curr_juldate, curr_juldate, sizeof(String) * DATE_ELEMENTS);
-
-
-  int days_lim = 194;
-  int hebdate_lim = 145;
-  int juldate_lim = 60;
-
-  // heb date
-  String hebdate = cal.curr_hebdate[0]+" "+cal.curr_hebdate[1]+" "+cal.curr_hebdate[2];
-  WriteString("שעה", TFT_WIDTH - 2, 5, Rubik_Light10, RTL);
-  WriteString("זמנית", TFT_WIDTH - 2, 15, Rubik_Light10, RTL);
-  WriteString(hebtime, hebdate_lim + 2, 5, Rubik_Light26, LTR);
-  WriteString(hebdate, TFT_WIDTH - 1, 25, Rubik_Light14 , RTL);
-
-  // jul date
-  fex.drawLine(hebdate_lim, 0, hebdate_lim, 40, TFT_LIGHTGREY);
-
-  String juldate = cal.curr_juldate[0]+"/"+cal.curr_juldate[1]+"/"+cal.curr_juldate[2];
-  WriteString(standardtime, juldate_lim + 10, 5, Rubik_Light26, LTR);
-  WriteString(juldate, juldate_lim + 2, 25, Rubik_Light14 , LTR);
-
-  // city name
-  fex.drawLine(juldate_lim, 0, juldate_lim, 40, TFT_LIGHTGREY);
-  WriteString(cal.city, juldate_lim - 2, 10, Rubik_Light20, RTL);
-
-
-  String sunset_notation[] = {"ש", "ש", "ש", "ש", "ש","ש", "ש"};
-  String alot_notation[] = {"עש", "עש", "עש", "עש", "עש","עש", "עש"};
-
-  String days[] = {"א", "ב", "ג", "ד", "ה","ו", "ז"};
-  String hebdays[] = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
-  String juldays[] = {"12", "13", "14", "15", "16","17","18"};
-  String sunrise[] = {"00:00", "06:43", "06:45", "06:48", "06:48","06:50","06:51"};
-  String alot[] = {"05:02", "05:03", "05:05", "05:08", "05:08","05:09","05:11"};
-  String sunset[] = {"19:12", "19:11", "19:09", "19:08", "19:08","19:07","19:05"};
-  String riseset_str[] = {"זריחה/שקיעה", "זריחה/שקיעה", "זריחה/שקיעה", "זריחה/שקיעה", "זריחה/שקיעה","זריחה/שקיעה","זריחה/שקיעה"};
-
-  memcpy(cal.days, days, sizeof(String) * DAYS_IN_WEEK);
-  memcpy(cal.juldays, juldays, sizeof(String) * DAYS_IN_WEEK);
-  memcpy(cal.hebdays, hebdays, sizeof(String) * DAYS_IN_WEEK);
+  memcpy(cal.juldates, juldates, sizeof(String) * DAYS_IN_WEEK);
+  memcpy(cal.hebdates, hebdates, sizeof(String) * DAYS_IN_WEEK);
   memcpy(cal.sunrise, sunrise, sizeof(String) * DAYS_IN_WEEK);
   memcpy(cal.sunset, sunset, sizeof(String) * DAYS_IN_WEEK);
   memcpy(cal.alot, alot, sizeof(String) * DAYS_IN_WEEK);
+  memcpy(cal.shma, shma, sizeof(String) * DAYS_IN_WEEK);
+  memcpy(cal.hatzot, hatzot, sizeof(String) * DAYS_IN_WEEK);
+  memcpy(cal.plag, plag, sizeof(String) * DAYS_IN_WEEK);
 
-  // columns:
-  // day, hebday, julday
-  WriteToCols(cal.days, TFT_WIDTH - 5, 7, Rubik_Light28, RTL);
-  WriteToCols(cal.juldays, days_lim + 7, 20, Rubik_Light14, LTR);
-  WriteToCols(cal.hebdays, days_lim + 22, 5, Rubik_Light14, RTL); 
+  UpdateCurrHebdate(cal.curr_hebdate);
+  UpdateCurrJuldate(cal.curr_juldate);
 
-  fex.drawLine(days_lim, 40, days_lim, TFT_HEIGHT , TFT_LIGHTGREY);
+  UpdateHebtime(hebtime);
+  UpdateStandardTime(standardtime);
+
+  UpdateCity(cal.city);
+
+  UpdateHebdates(cal.hebdates);
+  UpdateJuldates(cal.juldates);
 
   UpdateSunrise(cal.sunrise);
-  WriteToCols(cal.alot, 3, 5, Rubik_Light12, LTR);
-  WriteToCols(cal.sunset, 3, 25, Rubik_Light12, LTR); 
+  UpdateSunset(cal.sunset);
+  UpdateAlot(cal.alot);
 
-  DrawColLine(37);
+  UpdatePlag(cal.plag);
+  UpdateShma(cal.shma);
+  UpdateHatzot(cal.hatzot);
 
-  WriteToCols(alot_notation, 55, 5,Rubik_Light12, RTL);
-  WriteToCols(sunset_notation, 55, 25,Rubik_Light12, RTL);
-
-  DrawColLine(60);
-
+  UpdateShabat(cal.shabat_start, cal.shabat_end, cal.shabat_tam);
 }
 
-UpdateSunrise(String sunrises[])
+void UpdateHebdates(String hebdates[])
+{
+  WriteToCols(hebdates, 216, 5, Rubik_Light14, RTL); 
+}
+
+void UpdateJuldates(String juldates[])
+{
+  WriteToCols(juldates, 201, 20, Rubik_Light14, LTR);
+}
+
+void UpdateShabat(String shabat_start, String shabat_end, String shabat_tam)
+{
+  WriteString(shabat_start, 110, 243, Rubik_Light12, LTR);
+  WriteString(shabat_end, 110, 283, Rubik_Light12, LTR);
+  WriteString(shabat_tam, 110, 295, Rubik_Light12, LTR);
+  WriteString("כש", 160, 243, Rubik_Light12, RTL);
+  WriteString("צש", 160, 283, Rubik_Light12, RTL);
+  WriteString("רת", 160, 295, Rubik_Light12, RTL);
+}
+
+void UpdateAlot(String alots[])
+{
+  int yaxis = 3;
+  static String alot_notation[] = {"עש", "עש", "עש", "עש", "עש","עש", "עש"};
+
+  WriteToCols(alots, 54, yaxis, Rubik_Light12, LTR);
+  WriteToCols(alot_notation, 105, yaxis,Rubik_Light12, RTL);
+}
+
+void UpdateSunrise(String sunrises[])
 {
   int yaxis = 15;
-  String sunrise_notation[] = {"ז", "ז", "ז", "ז", "ז","ז", "ז"};
-  WriteToCols(sunrise_notation, 55, yaxis,Rubik_Light12, RTL);
-  WriteToCols(sunrises, 3, yaxis, Rubik_Light12, LTR); 
+  static String sunrise_notation[] = {"ז", "ז", "ז", "ז", "ז","ז", "ז"};
+
+  WriteToCols(sunrises, 54, yaxis, Rubik_Light12, LTR); 
+  WriteToCols(sunrise_notation, 105, yaxis,Rubik_Light12, RTL);
 }
+
+void UpdateShma(String shmas[])
+{
+  int yaxis = 27;
+  static String shma_notation[] = {"קש", "קש", "קש", "קש", "קש","קש", "קש"};
+
+  WriteToCols(shmas, 54, yaxis, Rubik_Light12, LTR);
+  WriteToCols(shma_notation, 105, yaxis,Rubik_Light12, RTL);
+}
+
+void UpdateHatzot(String hatzots[])
+{
+  int yaxis = 3;
+  static String hatzot_notation[] = {"ח", "ח", "ח", "ח", "ח","ח", "ח"};
+
+  WriteToCols(hatzots, 3, yaxis, Rubik_Light12, LTR);
+  WriteToCols(hatzot_notation, 48, yaxis,Rubik_Light12, RTL);
+}
+
+void UpdatePlag(String plags[])
+{
+  int yaxis = 15;
+  static String plag_notation[] = {"פ", "פ", "פ", "פ", "פ","פ", "פ"};
+
+  WriteToCols(plags, 3, yaxis, Rubik_Light12, LTR);
+  WriteToCols(plag_notation, 48, yaxis,Rubik_Light12, RTL);
+}
+
+void UpdateSunset(String sunsets[])
+{
+  int yaxis = 27;
+  static String sunset_notation[] = {"ש", "ש", "ש", "ש", "ש","ש", "ש"};
+
+  WriteToCols(sunsets, 3, yaxis, Rubik_Light12, LTR); 
+  WriteToCols(sunset_notation, 48, yaxis,Rubik_Light12, RTL);
+}
+
 
 void DrawColLine(int x)
 {
@@ -251,6 +337,43 @@ void TFTCreateUIFrame(void)
   // create two vertical lines
   tft.drawLine(0,0,0,TFT_HEIGHT,lines_color);
   tft.drawLine(TFT_WIDTH-1, 0, TFT_WIDTH-1, TFT_HEIGHT,lines_color);
+
+  // day and date seperator
+  tft.drawLine(196, 40, 196, TFT_HEIGHT , TFT_LIGHTGREY);
+
+  // shabat lines
+  tft.drawLine(143, 280, 143 , 307 , TFT_LIGHTGREY);
+  tft.drawLine(162, 280, 162 , 307 , TFT_LIGHTGREY);
+  tft.drawLine(107, 307, 162 , 307 , TFT_LIGHTGREY);
+
+  tft.drawLine(143, 240, 143 , 255 , TFT_LIGHTGREY);
+  tft.drawLine(162, 240, 162 , 255 , TFT_LIGHTGREY);
+  tft.drawLine(107, 255, 162 , 255 , TFT_LIGHTGREY);
+
+  // first ח פ ש
+  DrawColLine(37);
+  DrawColLine(51);
+
+  // second עש ז קש
+  DrawColLine(87);
+  DrawColLine(107);
+
+  int days_lim = 194;
+  int hebdate_lim = 145;
+  int juldate_lim = 60;
+
+  // jul date delimiter
+  fex.drawLine(hebdate_lim, 0, hebdate_lim, 40, TFT_LIGHTGREY);
+
+  // city name delimiter
+  fex.drawLine(juldate_lim, 0, juldate_lim, 40, TFT_LIGHTGREY);
+
+  // days in hebrew
+  String days[] = {"א", "ב", "ג", "ד", "ה","ו", "ז"};
+  WriteToCols(days, TFT_WIDTH - 5, 7, Rubik_Light28, RTL);
+
+  WriteString("שעה", TFT_WIDTH - 2, 5, Rubik_Light10, RTL);
+  WriteString("זמנית", TFT_WIDTH - 2, 15, Rubik_Light10, RTL);
 }
 
 void WriteToCols(String str_arr[], int32_t x, int32_t y, const uint8_t *font, int is_RTL)
