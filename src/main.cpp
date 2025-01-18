@@ -41,8 +41,10 @@ void OnSelect(void);
 
 // UI
 void TFTInitUIFrame(void);
-void WriteString(const String &string, int32_t x, int32_t y, const uint8_t *font, int is_RTL);
-void WriteToCols(const String str_arr[], int32_t x, int32_t y, const uint8_t *font, int is_RTL);
+void WriteSpriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite);
+void WriteZmanimToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite);
+void WriteString(const String &string, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL);
+void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL);
 void DrawColVertLine(int x);
 
 // all the function in setup
@@ -76,12 +78,18 @@ enum
 
 TFT_eSPI tft = TFT_eSPI();
 TFT_eFEX fex = TFT_eFEX(&tft);
-cal_data_ty cal;
+TFT_eSprite zmanim_tft = TFT_eSprite(&tft);
 
 const byte right_pin = 39;
 const byte left_pin = 38;  
 const byte middle_pin = 37;  
 int button_state = INIT_BUTTON;
+
+uint32_t bgColor = TFT_DARKCYAN;
+uint32_t textColor = TFT_SILVER;
+uint32_t lineColor = TFT_LIGHTGREY;
+
+uint32_t numOfLines = 8;
 
 
 void setup() 
@@ -93,6 +101,14 @@ void setup()
 void loop() 
 {
 
+  for(int i = 0; i < 20; i++)
+  {
+    String alot[] = {String(i) ,"2","4","1","2","4","3"};
+    UpdateAlot(alot);
+    UpdatePlag(alot);
+    delay(500);
+  }
+  // Serial.println("fhjd");
 }
 
 // ########## Function Decleration ######### //
@@ -149,8 +165,8 @@ void InitTFT(void)
   
   tft.init();
 
-  tft.setTextColor(TFT_SILVER, TFT_DARKCYAN);
-  tft.fillScreen(TFT_DARKCYAN);
+  tft.setTextColor(textColor, bgColor);
+  tft.fillScreen(bgColor);
 
   TFTInitUIFrame();
   TFTInitContent();
@@ -158,7 +174,7 @@ void InitTFT(void)
 
 void UpdateParasha(const String &parash)
 {
-  WriteString(parash, 195, 256, Rubik_Light12 , RTL);
+  WriteString(parash, 195, 256, 5, 5, Rubik_Light12 , RTL);
 }
 
 void TFTInitContent(void)
@@ -167,7 +183,7 @@ void TFTInitContent(void)
   String city = "ירושלים";
   String hebtime = "01:23";
   String standardtime = "20:46";
-  String curr_hebdate[] = {"כה","ניסן","תשפד"};
+  String curr_hebdate[] = {"כה","ניסן","תשגד"};
   String curr_juldate[] = {"12","04","2024"};
   String hebdates[] = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
   String juldates[] = {"12", "13", "14", "15", "16","17","18"};
@@ -205,54 +221,54 @@ void TFTInitContent(void)
   UpdateShabat(shabat_start, shabat_end, shabat_tam);
   UpdateParasha(parasha);
 
-  WriteString("פרשת",195, 242,Rubik_Light14, RTL);
+  WriteString("פרשת",195, 242, 5, 5, Rubik_Light14, RTL);
 }
 
 void UpdateCurrHebdate(const String curr_hebdate[])
 {
   String hebdate = curr_hebdate[0]+" "+curr_hebdate[1]+" "+curr_hebdate[2];
-  WriteString(hebdate, TFT_WIDTH - 1, 25, Rubik_Light14 , RTL);
+  WriteString(hebdate, TFT_WIDTH - 1, 25, 5, 5, Rubik_Light14 , RTL);
 }
 
 void UpdateCurrJuldate(const String curr_juldate[])
 {
   String juldate = curr_juldate[0]+"/"+curr_juldate[1]+"/"+curr_juldate[2];
-  WriteString(juldate, 62, 25, Rubik_Light14 , LTR);
+  WriteString(juldate, 62, 25, 77, 13, Rubik_Light14 , LTR);
 }
 
 void UpdateHebtime(const String &hebtime)
 {
-  WriteString(hebtime, 147, 5, Rubik_Light26, LTR);
+  WriteString(hebtime, 147, 5, 5, 5, Rubik_Light26, LTR);
 }
 
 void UpdateStandardTime(const String &standardtime)
 {
-  WriteString(standardtime, 70, 5, Rubik_Light26, LTR);
+  WriteString(standardtime, 70, 5, 5, 5, Rubik_Light26, LTR);
 }
 
 void UpdateCity(const String &city)
 {
-  WriteString(city, 58, 10, Rubik_Light20, RTL);
+  WriteString(city, 58, 10, 5, 5, Rubik_Light20, RTL);
 }
 
 void UpdateHebdates(const String hebdates[])
 {
-  WriteToCols(hebdates, 216, 5, Rubik_Light14, RTL); 
+  WriteToCols(hebdates, 216, 5, 5, 5, Rubik_Light14, RTL); 
 }
 
 void UpdateJuldates(const String juldates[])
 {
-  WriteToCols(juldates, 201, 20, Rubik_Light14, LTR);
+  WriteToCols(juldates, 201, 20, 5, 5, Rubik_Light14, LTR);
 }
 
 void UpdateShabat(const String shabat_start, String shabat_end, String shabat_tam)
 {
-  WriteString(shabat_start, 110, 243, Rubik_Light12, LTR);
-  WriteString(shabat_end, 110, 283, Rubik_Light12, LTR);
-  WriteString(shabat_tam, 110, 295, Rubik_Light12, LTR);
-  WriteString("כש", 160, 243, Rubik_Light12, RTL);
-  WriteString("צש", 160, 283, Rubik_Light12, RTL);
-  WriteString("רת", 160, 295, Rubik_Light12, RTL);
+  WriteSpriteString(shabat_start, 110, 243, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteSpriteString(shabat_end, 110, 283, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteSpriteString(shabat_tam, 110, 295, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteString("כש", 160, 243, 5, 5, Rubik_Light12, RTL);
+  WriteString("צש", 160, 283, 5, 5, Rubik_Light12, RTL);
+  WriteString("רת", 160, 295, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdateAlot(const String alots[])
@@ -260,8 +276,8 @@ void UpdateAlot(const String alots[])
   int yaxis = 3;
   static String alot_notation[] = {"עש", "עש", "עש", "עש", "עש","עש", "עש"};
 
-  WriteToCols(alots, 54, yaxis, Rubik_Light12, LTR);
-  WriteToCols(alot_notation, 105, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(alots, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteToCols(alot_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdateSunrise(const String sunrises[])
@@ -269,8 +285,8 @@ void UpdateSunrise(const String sunrises[])
   int yaxis = 15;
   static String sunrise_notation[] = {"ז", "ז", "ז", "ז", "ז","ז", "ז"};
 
-  WriteToCols(sunrises, 54, yaxis, Rubik_Light12, LTR); 
-  WriteToCols(sunrise_notation, 105, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(sunrises, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft); 
+  WriteToCols(sunrise_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdateShma(const String shmas[])
@@ -278,8 +294,8 @@ void UpdateShma(const String shmas[])
   int yaxis = 27;
   static String shma_notation[] = {"קש", "קש", "קש", "קש", "קש","קש", "קש"};
 
-  WriteToCols(shmas, 54, yaxis, Rubik_Light12, LTR);
-  WriteToCols(shma_notation, 105, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(shmas, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteToCols(shma_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdateHatzot(const String hatzots[])
@@ -287,8 +303,8 @@ void UpdateHatzot(const String hatzots[])
   int yaxis = 3;
   static String hatzot_notation[] = {"ח", "ח", "ח", "ח", "ח","ח", "ח"};
 
-  WriteToCols(hatzots, 3, yaxis, Rubik_Light12, LTR);
-  WriteToCols(hatzot_notation, 48, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(hatzots, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteToCols(hatzot_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdatePlag(const String plags[])
@@ -296,8 +312,8 @@ void UpdatePlag(const String plags[])
   int yaxis = 15;
   static String plag_notation[] = {"פ", "פ", "פ", "פ", "פ","פ", "פ"};
 
-  WriteToCols(plags, 3, yaxis, Rubik_Light12, LTR);
-  WriteToCols(plag_notation, 48, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(plags, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
+  WriteToCols(plag_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
 }
 
 void UpdateSunset(const String sunsets[])
@@ -305,44 +321,41 @@ void UpdateSunset(const String sunsets[])
   int yaxis = 27;
   static String sunset_notation[] = {"ש", "ש", "ש", "ש", "ש","ש", "ש"};
 
-  WriteToCols(sunsets, 3, yaxis, Rubik_Light12, LTR); 
-  WriteToCols(sunset_notation, 48, yaxis,Rubik_Light12, RTL);
+  WriteZmanimToCols(sunsets, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft); 
+  WriteToCols(sunset_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
 }
-
 
 void DrawColVertLine(int x)
 {
-  fex.drawLine(x, 40, x, TFT_HEIGHT , TFT_LIGHTGREY);
+  fex.drawLine(x, 40, x, TFT_HEIGHT ,lineColor);
 }
 
 void TFTInitUIFrame(void)
 {
-  int lines = 8;
-  int lines_color = TFT_LIGHTGREY;
 
-  for(int i = 0; i < lines; ++i)
+  for(int i = 0; i < numOfLines; ++i)
   {
-    int portion = (TFT_HEIGHT / lines) * i;
-    tft.drawLine(0,portion,TFT_WIDTH,portion,lines_color);
+    int portion = (TFT_HEIGHT / numOfLines) * i;
+    tft.drawLine(0,portion,TFT_WIDTH,portion, lineColor);
   }
   // create last horizontal line
-  tft.drawLine(0,TFT_HEIGHT-1,TFT_WIDTH,TFT_HEIGHT-1,lines_color);
+  tft.drawLine(0,TFT_HEIGHT-1,TFT_WIDTH,TFT_HEIGHT-1, lineColor);
 
-  // create two vertical lines
-  tft.drawLine(0,0,0,TFT_HEIGHT,lines_color);
-  tft.drawLine(TFT_WIDTH-1, 0, TFT_WIDTH-1, TFT_HEIGHT,lines_color);
+  // create two vertical numOfLines
+  tft.drawLine(0,0,0,TFT_HEIGHT, lineColor);
+  tft.drawLine(TFT_WIDTH-1, 0, TFT_WIDTH-1, TFT_HEIGHT, lineColor);
 
   // day and date seperator
-  tft.drawLine(196, 40, 196, TFT_HEIGHT , TFT_LIGHTGREY);
+  tft.drawLine(196, 40, 196, TFT_HEIGHT , lineColor);
 
   // shabat lines
-  tft.drawLine(143, 280, 143 , 307 , TFT_LIGHTGREY);
-  tft.drawLine(162, 280, 162 , 307 , TFT_LIGHTGREY);
-  tft.drawLine(107, 307, 162 , 307 , TFT_LIGHTGREY);
+  tft.drawLine(143, 280, 143 , 307 , lineColor);
+  tft.drawLine(162, 280, 162 , 307 , lineColor);
+  tft.drawLine(107, 307, 162 , 307 , lineColor);
 
-  tft.drawLine(143, 240, 143 , 255 , TFT_LIGHTGREY);
-  tft.drawLine(162, 240, 162 , 255 , TFT_LIGHTGREY);
-  tft.drawLine(107, 255, 162 , 255 , TFT_LIGHTGREY);
+  tft.drawLine(143, 240, 143 , 255 , lineColor);
+  tft.drawLine(162, 240, 162 , 255 , lineColor);
+  tft.drawLine(107, 255, 162 , 255 , lineColor);
 
   // first ח פ ש
   DrawColVertLine(37);
@@ -357,56 +370,71 @@ void TFTInitUIFrame(void)
   int juldate_lim = 60;
 
   // jul date delimiter
-  fex.drawLine(hebdate_lim, 0, hebdate_lim, 40, TFT_LIGHTGREY);
+  fex.drawLine(hebdate_lim, 0, hebdate_lim, 40, lineColor);
 
   // city name delimiter
-  fex.drawLine(juldate_lim, 0, juldate_lim, 40, TFT_LIGHTGREY);
+  fex.drawLine(juldate_lim, 0, juldate_lim, 40, lineColor);
 
   // days in hebrew
   String days[] = {"א", "ב", "ג", "ד", "ה","ו", "ז"};
-  WriteToCols(days, TFT_WIDTH - 5, 7, Rubik_Light28, RTL);
+  WriteToCols(days, TFT_WIDTH - 5, 7, 15 ,15,Rubik_Light28, RTL);
 
-  WriteString("שעה", TFT_WIDTH - 2, 5, Rubik_Light10, RTL);
-  WriteString("זמנית", TFT_WIDTH - 2, 15, Rubik_Light10, RTL);
+  WriteString("שעה", TFT_WIDTH - 2, 5, 10, 10, Rubik_Light10, RTL);
+  WriteString("זמנית", TFT_WIDTH - 2, 15, 10, 10, Rubik_Light10, RTL);
 }
 
-void WriteToCols(const String str_arr[], int32_t x, int32_t y, const uint8_t *font, int is_RTL)
+void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL)
 {
-  tft.loadFont(font);
-
-  int i = 1;
-  int lines = 8;
-
-  for(; i < lines; ++i)
+  for(int i = 1; i < numOfLines; ++i)
   {
-    int portion = (TFT_HEIGHT / lines) * (i);
+    int portion = (TFT_HEIGHT / numOfLines) * (i);
 
-    if(is_RTL)
-    {
-    fex.setCursorRTL(x ,portion + y);
-    fex.drawStringRTL(str_arr[i-1]);
-    }else{
-      tft.drawString(str_arr[i-1],x, portion + y);
-    }
+    WriteString(str_arr[i-1], x, y + portion, width, height, font, is_RTL);
   }
-
-  tft.unloadFont();
 }
 
-void WriteString(const String &str, int32_t x, int32_t y, const uint8_t *font, int is_RTL)
+
+void WriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL)
 {
   tft.loadFont(font);
-
+  
   if(is_RTL)
   {
+    // fex.fillRect(x, y, width, height, TFT_BLACK);
     fex.setCursorRTL(x, y);
     fex.drawStringRTL(str);
   }else{
+    tft.fillRect(x, y, width, height, TFT_BLACK);
     tft.drawString(str, x, y);
   }
 
   tft.unloadFont();
 }
+
+void WriteZmanimToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite)
+{
+  for(int i = 1; i < numOfLines; ++i)
+  {
+    int portion = (TFT_HEIGHT / numOfLines) * (i);
+
+    WriteSpriteString(str_arr[i-1], x, y + portion, width, height, font, tftSprite);
+  }
+}
+
+void WriteSpriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t* font, TFT_eSprite& tftSprite)
+{
+  tftSprite.loadFont(font);
+
+  tftSprite.createSprite(width, height);
+  tftSprite.setTextColor(textColor, bgColor);
+  tftSprite.fillScreen(bgColor);
+  
+  tftSprite.drawString(str, 0, 0);
+  tftSprite.pushSprite(x, y);
+
+  tftSprite.unloadFont();
+}
+
 
 
 
@@ -443,12 +471,12 @@ void WriteString(const String &str, int32_t x, int32_t y, const uint8_t *font, i
 // tft.setRotation(1);
 //   tft.fillScreen(TFT_BLACK);
 //   tft.setTextSize(3);
-//   tft.drawRect(0,0,319,239,lines_color);
-//   tft.drawLine(0,100,319,100,lines_color);
-//   tft.drawLine(0,160,319,160,lines_color);
-//   tft.drawLine(160,160,160,239,lines_color);
-//   tft.drawLine(160,200,339,200,lines_color); //x1,y1,x2,y2
-//   tft.setTextColor(lines_color,TFT_BLACK);
+//   tft.drawRect(0,0,319,239,lineColor);
+//   tft.drawLine(0,100,319,100,lineColor);
+//   tft.drawLine(0,160,319,160,lineColor);
+//   tft.drawLine(160,160,160,239,lineColor);
+//   tft.drawLine(160,200,339,200,lineColor); //x1,y1,x2,y2
+//   tft.setTextColor(lineColor,TFT_BLACK);
 //   tft.drawString("23",40,175,2);//Temperature
 //   tft.setTextColor(TFT_YELLOW,TFT_BLACK);
 //   tft.setTextColor(TFT_WHITE,TFT_BLACK);
