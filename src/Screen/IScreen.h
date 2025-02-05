@@ -1,3 +1,6 @@
+#pragma once 
+
+#include <TFT_eSPI.h>
 #include <TFT_eFEX.h>
 #include "TextObjects.h"
 
@@ -20,6 +23,9 @@ public:
 
     void WriteString(const StringObj& str_, TFT_eFEX& fex_);
     void WriteToCols(const StringArrObj& str_vec_, TFT_eFEX& fex_);
+
+    void DrawColVertLine(int x_, TFT_eSPI tft_);
+
 
 protected:
     const uint32_t m_bgColor;
