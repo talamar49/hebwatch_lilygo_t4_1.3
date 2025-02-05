@@ -13,25 +13,10 @@
 #include "Rubik-Light26.h"
 #include "Rubik-Light28.h"
 
+#include <vector>
 #define DAYS_IN_WEEK 7
 #define DATE_ELEMENTS 3
 
-
-
-enum
-{
-  LTR = 0,
-  RTL = 1
-};
-
-typedef struct cal_data_ty
-{
-  String city;
-  String curr_juldate[DATE_ELEMENTS];
-  String lat;
-  String lon;
-
-}cal_data_ty;
 
 // Button handler
 void ButtonHandler(void);
@@ -42,9 +27,9 @@ void OnSelect(void);
 // UI
 void TFTInitUIFrame(void);
 void WriteSpriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite);
-void WriteZmanimToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite);
-void WriteString(const String &string, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL);
-void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL);
+void WriteSpriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite);
+void WriteString(const String &string, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eFEX& fex_);
+void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eFEX& fex);
 void DrawColVertLine(int x);
 
 // all the function in setup
@@ -78,7 +63,10 @@ enum
 
 TFT_eSPI tft = TFT_eSPI();
 TFT_eFEX fex = TFT_eFEX(&tft);
-TFT_eSprite zmanim_tft = TFT_eSprite(&tft);
+TFT_eSprite zmanim_sprite = TFT_eSprite(&tft);
+TFT_eSprite jultime_sprite = TFT_eSprite(&tft);
+TFT_eSprite standardTime_sprite = TFT_eSprite(&tft);
+TFT_eSprite juldate_sprite = TFT_eSprite(&tft);
 
 const byte right_pin = 39;
 const byte left_pin = 38;  
@@ -100,12 +88,20 @@ void setup()
 
 void loop() 
 {
+  String cities[] = {"ץ","ת","צ","מ","ך","ו","ט","כ","ע","ר"};
 
-  for(int i = 0; i < 20; i++)
+  for(int i = 0; i < 10; i++)
   {
+    String City = String("נהריה") + cities[i] + String("ת") ;
     String alot[] = {String(i) ,"2","4","1","2","4","3"};
+    String date[] = {"0"+String(i) ,"12", "202"+String(i)};
+    String standardTime = String(i)+String(i)+":"+String(i)+String(i);
     UpdateAlot(alot);
     UpdatePlag(alot);
+    // UpdateCurrJuldate(date);
+    UpdateStandardTime(standardTime);
+    UpdateHebtime(standardTime);
+    UpdateCity(City);
     delay(500);
   }
   // Serial.println("fhjd");
@@ -174,7 +170,7 @@ void InitTFT(void)
 
 void UpdateParasha(const String &parash)
 {
-  WriteString(parash, 195, 256, 5, 5, Rubik_Light12 , RTL);
+  WriteString(parash, 195, 256, 86, 12, Rubik_Light12, fex);
 }
 
 void TFTInitContent(void)
@@ -186,7 +182,7 @@ void TFTInitContent(void)
   String curr_hebdate[] = {"כה","ניסן","תשגד"};
   String curr_juldate[] = {"12","04","2024"};
   String hebdates[] = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
-  String juldates[] = {"12", "13", "14", "15", "16","17","18"};
+  String juldates[] = {"00", "13", "14", "15", "16","17","18"};
   String sunrise[] = {"06:42", "06:43", "06:45", "06:48", "06:48","06:50","06:51"};
   String alot[] = {"00:00", "05:03", "05:05", "05:08", "05:08","05:09","05:11"};
   String sunset[] = {"19:12", "19:11", "19:09", "19:08", "19:08","19:07","19:05"};
@@ -221,54 +217,55 @@ void TFTInitContent(void)
   UpdateShabat(shabat_start, shabat_end, shabat_tam);
   UpdateParasha(parasha);
 
-  WriteString("פרשת",195, 242, 5, 5, Rubik_Light14, RTL);
+  WriteString("פרשת",195, 242, 5, 5, Rubik_Light14, fex);
 }
 
 void UpdateCurrHebdate(const String curr_hebdate[])
 {
   String hebdate = curr_hebdate[0]+" "+curr_hebdate[1]+" "+curr_hebdate[2];
-  WriteString(hebdate, TFT_WIDTH - 1, 25, 5, 5, Rubik_Light14 , RTL);
+  WriteString(hebdate, TFT_WIDTH - 1, 25, 90, 15, Rubik_Light14, fex);
 }
 
 void UpdateCurrJuldate(const String curr_juldate[])
 {
   String juldate = curr_juldate[0]+"/"+curr_juldate[1]+"/"+curr_juldate[2];
-  WriteString(juldate, 62, 25, 77, 13, Rubik_Light14 , LTR);
+  WriteSpriteString(juldate, 62, 25, 77, 13, Rubik_Light14, jultime_sprite);
 }
 
 void UpdateHebtime(const String &hebtime)
 {
-  WriteString(hebtime, 147, 5, 5, 5, Rubik_Light26, LTR);
+  WriteSpriteString(hebtime, 147, 5, 68, 18, Rubik_Light26, standardTime_sprite);
 }
 
 void UpdateStandardTime(const String &standardtime)
 {
-  WriteString(standardtime, 70, 5, 5, 5, Rubik_Light26, LTR);
+  WriteSpriteString(standardtime, 70, 5, 68, 18, Rubik_Light26, standardTime_sprite);
 }
 
 void UpdateCity(const String &city)
 {
-  WriteString(city, 58, 10, 5, 5, Rubik_Light20, RTL);
+  WriteString(city, 58, 10, 55, 20, Rubik_Light20, fex);
 }
 
 void UpdateHebdates(const String hebdates[])
 {
-  WriteToCols(hebdates, 216, 5, 5, 5, Rubik_Light14, RTL); 
+  WriteToCols(hebdates, 216, 5, 18, 13, Rubik_Light14, fex); 
 }
 
 void UpdateJuldates(const String juldates[])
 {
-  WriteToCols(juldates, 201, 20, 5, 5, Rubik_Light14, LTR);
+  // WriteToCols(juldates, 201, 20, 19, 13, Rubik_Light14, LTR);
+  WriteSpriteToCols(juldates, 201, 20, 19, 13, Rubik_Light14, juldate_sprite);
 }
 
 void UpdateShabat(const String shabat_start, String shabat_end, String shabat_tam)
 {
-  WriteSpriteString(shabat_start, 110, 243, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteSpriteString(shabat_end, 110, 283, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteSpriteString(shabat_tam, 110, 295, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteString("כש", 160, 243, 5, 5, Rubik_Light12, RTL);
-  WriteString("צש", 160, 283, 5, 5, Rubik_Light12, RTL);
-  WriteString("רת", 160, 295, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteString(shabat_start, 110, 243, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteSpriteString(shabat_end, 110, 283, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteSpriteString(shabat_tam, 110, 295, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteString("כש", 160, 243, 5, 5, Rubik_Light12, fex);
+  WriteString("צש", 160, 283, 5, 5, Rubik_Light12, fex);
+  WriteString("רת", 160, 295, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdateAlot(const String alots[])
@@ -276,8 +273,8 @@ void UpdateAlot(const String alots[])
   int yaxis = 3;
   static String alot_notation[] = {"עש", "עש", "עש", "עש", "עש","עש", "עש"};
 
-  WriteZmanimToCols(alots, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteToCols(alot_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(alots, 54, yaxis, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteToCols(alot_notation, 105, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdateSunrise(const String sunrises[])
@@ -285,8 +282,8 @@ void UpdateSunrise(const String sunrises[])
   int yaxis = 15;
   static String sunrise_notation[] = {"ז", "ז", "ז", "ז", "ז","ז", "ז"};
 
-  WriteZmanimToCols(sunrises, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft); 
-  WriteToCols(sunrise_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(sunrises, 54, yaxis, 32, 10, Rubik_Light12, zmanim_sprite); 
+  WriteToCols(sunrise_notation, 105, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdateShma(const String shmas[])
@@ -294,8 +291,8 @@ void UpdateShma(const String shmas[])
   int yaxis = 27;
   static String shma_notation[] = {"קש", "קש", "קש", "קש", "קש","קש", "קש"};
 
-  WriteZmanimToCols(shmas, 54, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteToCols(shma_notation, 105, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(shmas, 54, yaxis, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteToCols(shma_notation, 105, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdateHatzot(const String hatzots[])
@@ -303,8 +300,8 @@ void UpdateHatzot(const String hatzots[])
   int yaxis = 3;
   static String hatzot_notation[] = {"ח", "ח", "ח", "ח", "ח","ח", "ח"};
 
-  WriteZmanimToCols(hatzots, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteToCols(hatzot_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(hatzots, 3, yaxis, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteToCols(hatzot_notation, 48, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdatePlag(const String plags[])
@@ -312,8 +309,8 @@ void UpdatePlag(const String plags[])
   int yaxis = 15;
   static String plag_notation[] = {"פ", "פ", "פ", "פ", "פ","פ", "פ"};
 
-  WriteZmanimToCols(plags, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft);
-  WriteToCols(plag_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(plags, 3, yaxis, 32, 10, Rubik_Light12, zmanim_sprite);
+  WriteToCols(plag_notation, 48, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void UpdateSunset(const String sunsets[])
@@ -321,8 +318,8 @@ void UpdateSunset(const String sunsets[])
   int yaxis = 27;
   static String sunset_notation[] = {"ש", "ש", "ש", "ש", "ש","ש", "ש"};
 
-  WriteZmanimToCols(sunsets, 3, yaxis, 32, 10, Rubik_Light12, zmanim_tft); 
-  WriteToCols(sunset_notation, 48, yaxis, 5, 5, Rubik_Light12, RTL);
+  WriteSpriteToCols(sunsets, 3, yaxis, 32, 10, Rubik_Light12, zmanim_sprite); 
+  WriteToCols(sunset_notation, 48, yaxis, 5, 5, Rubik_Light12, fex);
 }
 
 void DrawColVertLine(int x)
@@ -377,41 +374,35 @@ void TFTInitUIFrame(void)
 
   // days in hebrew
   String days[] = {"א", "ב", "ג", "ד", "ה","ו", "ז"};
-  WriteToCols(days, TFT_WIDTH - 5, 7, 15 ,15,Rubik_Light28, RTL);
+  WriteToCols(days, TFT_WIDTH - 5, 7, 15 ,15,Rubik_Light28, fex);
 
-  WriteString("שעה", TFT_WIDTH - 2, 5, 10, 10, Rubik_Light10, RTL);
-  WriteString("זמנית", TFT_WIDTH - 2, 15, 10, 10, Rubik_Light10, RTL);
+  WriteString("שעה", TFT_WIDTH - 2, 5, 10, 10, Rubik_Light10, fex);
+  WriteString("זמנית", TFT_WIDTH - 2, 15, 10, 10, Rubik_Light10, fex);
 }
 
-void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL)
+void WriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eFEX& fex)
 {
   for(int i = 1; i < numOfLines; ++i)
   {
     int portion = (TFT_HEIGHT / numOfLines) * (i);
 
-    WriteString(str_arr[i-1], x, y + portion, width, height, font, is_RTL);
+    WriteString(str_arr[i-1], x, y + portion, width, height, font, fex);
   }
 }
 
 
-void WriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, int is_RTL)
+void WriteString(const String &str, int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eFEX& fex_)
 {
-  tft.loadFont(font);
+  fex_.GetESpi()->loadFont(font);
   
-  if(is_RTL)
-  {
-    // fex.fillRect(x, y, width, height, TFT_BLACK);
-    fex.setCursorRTL(x, y);
-    fex.drawStringRTL(str);
-  }else{
-    tft.fillRect(x, y, width, height, TFT_BLACK);
-    tft.drawString(str, x, y);
-  }
+  fex_.fillRect(x - width, y, width, height, bgColor); // renderer
+  fex_.setCursorRTL(x, y);
+  fex_.drawStringRTL(str);
 
-  tft.unloadFont();
+  fex_.GetESpi()->unloadFont();
 }
 
-void WriteZmanimToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite)
+void WriteSpriteToCols(const String str_arr[], int32_t x, int32_t y, int32_t width, int32_t height, const uint8_t *font, TFT_eSprite& tftSprite)
 {
   for(int i = 1; i < numOfLines; ++i)
   {
