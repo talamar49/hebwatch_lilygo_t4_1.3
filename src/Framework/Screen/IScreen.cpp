@@ -1,7 +1,8 @@
-#include "Screen/IScreen.h"
+#include "Framework/Screen/IScreen.h"
 
-IScreen::IScreen(uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
-                : 
+IScreen::IScreen(TopicServer& topicServer_, uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
+                :
+                m_topicServer(topicServer_), 
                 m_bgColor(bgColor_),
                 m_textColor(textColor_),
                 m_lineColor(lineColor_),

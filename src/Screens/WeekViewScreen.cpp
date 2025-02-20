@@ -1,15 +1,16 @@
-#include "Screen/Screens/WeekViewScreen.h"
+#include "Screens/WeekViewScreen.h"
 
 
-WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
-                                : IScreen(bgColor_, textColor_, lineColor_, numOfLines_),
+WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
+                                : IScreen(topicServer_, bgColor_, textColor_, lineColor_, numOfLines_),
                                   m_tft(tft_),
                                   m_fex(&m_tft),
                                   m_juldate_sprite(&m_tft),
                                   m_jultime_sprite(&m_tft),
                                   m_standardTime_sprite(&m_tft),
                                   m_zmanim_sprite(&m_tft)
-{}
+{
+}
 
 void WeekViewScreen::Render()
 {
@@ -18,6 +19,7 @@ void WeekViewScreen::Render()
     
   TFTInitUIFrame();
   TFTInitContent();
+
 }
 
 void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)

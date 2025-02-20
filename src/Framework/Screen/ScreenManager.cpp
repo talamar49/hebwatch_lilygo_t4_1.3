@@ -1,4 +1,4 @@
-#include "Screen/ScreenManager.h"
+#include "Framework/Screen/ScreenManager.h"
 
 ScreenManager::ScreenManager(IScreen* initialScreen_)
                              : m_currentScreen(initialScreen_)
@@ -9,9 +9,15 @@ ScreenManager::ScreenManager(IScreen* initialScreen_)
 void ScreenManager::SetScreen(IScreen* newScreen_) 
 {
     m_currentScreen = newScreen_;
+    m_currentScreen->Render();
 }
 
 void ScreenManager::Render() 
 {
     m_currentScreen->Render();
+}
+
+IScreen* ScreenManager::GetCurrentScreen()
+{
+    return m_currentScreen;
 }

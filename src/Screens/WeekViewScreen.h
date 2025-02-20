@@ -1,12 +1,12 @@
 #pragma once 
 
 #include <TFT_eSPI.h>
-#include "Screen/IScreen.h"
+#include "Framework/Screen/IScreen.h"
 
 class WeekViewScreen : public IScreen 
 {
 public:
-    WeekViewScreen(TFT_eSPI tft_, uint32_t bgColor_ = TFT_DARKCYAN, uint32_t textColor_ = TFT_SILVER, uint32_t lineColor_ = TFT_LIGHTGREY, uint32_t numOfLines_ = 8);
+    WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_t bgColor_ = TFT_DARKCYAN, uint32_t textColor_ = TFT_SILVER, uint32_t lineColor_ = TFT_LIGHTGREY, uint32_t numOfLines_ = 8);
 
     void Render() override;
 
