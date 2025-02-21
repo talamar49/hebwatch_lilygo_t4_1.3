@@ -61,7 +61,23 @@ void IScreen::WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite
   tftSprite_.unloadFont();
 }
 
-void IScreen::DrawColVertLine(int x_, TFT_eSPI tft_)
+void IScreen::DrawColVerticalLine(int x_, TFT_eSPI tft_)
 {
   tft_.drawLine(x_, 40, x_, TFT_HEIGHT ,m_lineColor);
+}
+
+void IScreen::DrawColHorizontalLine(int y_, TFT_eSPI tft_)
+{
+  tft_.drawLine(0, y_, TFT_WIDTH, y_ ,m_lineColor);
+}
+
+String IScreen::ToString(int number) {
+    // Check if the number is between 0 and 9
+    if (number >= 0 && number <= 9) {
+        // Add a leading zero and return as a String
+        return "0" + String(number);
+    } else {
+        // Return the number as a String without modification
+        return String(number);
+    }
 }

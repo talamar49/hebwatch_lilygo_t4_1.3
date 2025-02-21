@@ -6,10 +6,12 @@ WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_
                                   m_tft(tft_),
                                   m_fex(&m_tft),
                                   m_juldate_sprite(&m_tft),
-                                  m_jultime_sprite(&m_tft),
                                   m_standardTime_sprite(&m_tft),
                                   m_zmanim_sprite(&m_tft)
 {
+  m_topicServer.Subscribe<DateTime>("DateTimeTopic",[this](DateTime now){
+    m_datetimeNow = now;
+  });
 }
 
 void WeekViewScreen::Render()
@@ -19,7 +21,12 @@ void WeekViewScreen::Render()
     
   TFTInitUIFrame();
   TFTInitContent();
+}
 
+void WeekViewScreen::Loop()
+{
+  UpdateStandardTime(ToString(m_datetimeNow.hour()) + ":" + ToString(m_datetimeNow.minute()));
+  UpdateCurrJuldate({ToString(m_datetimeNow.day()),ToString(m_datetimeNow.month()),ToString(m_datetimeNow.year())});
 }
 
 void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)
@@ -32,7 +39,7 @@ void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)
 void WeekViewScreen::UpdateCurrJuldate(std::vector<String> curr_juldate_)
 {
   String juldate = curr_juldate_[0]+"/"+curr_juldate_[1]+"/"+curr_juldate_[2];
-  WriteSpriteString(StringObj(juldate, 62, 25, 77, 13, Rubik_Light14), m_jultime_sprite);
+  WriteSpriteString(StringObj(juldate, 62, 25, 77, 13, Rubik_Light14), m_juldate_sprite);
 }
 
 void WeekViewScreen::UpdateHebtime(const String &hebtime_)
@@ -133,12 +140,12 @@ void WeekViewScreen::TFTInitContent(void)
 {
     // init struct
   String city = "ירושלים";
-  String hebtime = "01:23";
-  String standardtime = "20:46";
+  String hebtime = "00:00";
+  String standardtime = "00:00";
   std::vector<String> curr_hebdate = {"כה","ניסן","תשגד"};
   std::vector<String> curr_juldate = {"12","04","2024"};
   std::vector<String> hebdates = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
-  std::vector<String> juldates = {"00", "13", "14", "15", "16","17","18"};
+  std::vector<String> juldates = {"00", "00", "00", "00", "00","00","00"};
   std::vector<String> sunrise = {"06:42", "06:43", "06:45", "06:48", "06:48","06:50","06:51"};
   std::vector<String> alot = {"00:00", "05:03", "05:05", "05:08", "05:08","05:09","05:11"};
   std::vector<String> sunset = {"19:12", "19:11", "19:09", "19:08", "19:08","19:07","19:05"};
@@ -204,12 +211,12 @@ void WeekViewScreen::TFTInitUIFrame(void)
   m_tft.drawLine(107, 255, 162 , 255 , m_lineColor);
 
   // first ח פ ש
-  DrawColVertLine(37, m_tft);
-  DrawColVertLine(51, m_tft);
+  DrawColVerticalLine(37, m_tft);
+  DrawColVerticalLine(51, m_tft);
 
   // second עש ז קש
-  DrawColVertLine(87, m_tft);
-  DrawColVertLine(107, m_tft);
+  DrawColVerticalLine(87, m_tft);
+  DrawColVerticalLine(107, m_tft);
 
   int days_lim = 194;
   int hebdate_lim = 145;

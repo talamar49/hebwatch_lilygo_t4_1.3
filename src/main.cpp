@@ -11,8 +11,6 @@
 TFT_eSPI g_tft = TFT_eSPI();
 TopicServer g_topicServer;
 RTC_DS3231 rtc;
-ButtonHandler buttonHandler(38, 37, 39); // Pass your pin numbers
-
 
 void setup() 
 {
@@ -32,16 +30,25 @@ void setup()
     rtc.adjust(DateTime(2023, 1, 1, 0, 0, 0));
   }
 
-  buttonHandler.Initialize(g_topicServer);
+  ButtonInitialize(g_topicServer);
 
-  g_topicServer.Subscribe("RightButtonTopic",[](){
-    std::cout << "right" << std::endl;
+  g_topicServer.Subscribe("RightButtonShortPressTopic",[](){
+    std::cout << "RightButtonShortPressTopic" << std::endl;
   });
-  g_topicServer.Subscribe("LeftButtonTopic",[](){
-    std::cout << "LeftButtonTopic" << std::endl;
+  g_topicServer.Subscribe("LeftButtonShortPressTopic",[](){
+    std::cout << "LeftButtonShortPressTopic" << std::endl;
   });
-  g_topicServer.Subscribe("MiddleButtonTopic",[](){
-    std::cout << "MiddleButtonTopic" << std::endl;
+  g_topicServer.Subscribe("MiddleButtonShortPressTopic",[](){
+    std::cout << "MiddleButtonShortPressTopic" << std::endl;
+  });
+  g_topicServer.Subscribe("LeftButtonLongPressTopic",[](){
+    std::cout << "LeftButtonLongPressTopic" << std::endl;
+  });
+  g_topicServer.Subscribe("MiddleButtonLongPressTopic",[](){
+    std::cout << "MiddleButtonLongPressTopic" << std::endl;
+  });
+  g_topicServer.Subscribe("RightButtonLongPressTopic",[](){
+    std::cout << "RightButtonLongPressTopic" << std::endl;
   });
   g_tft.init();
 }
@@ -51,16 +58,12 @@ void loop()
 {
   static WeekViewScreen weekViewScreen(g_tft, g_topicServer);
   static SettingsScreen settingsScreen(g_tft, g_topicServer);
-
-  static ScreenManager screenManager(&weekViewScreen);
+  static ScreenManager screenManager(&settingsScreen);
   
-  buttonHandler.CheckIsPressed();
+  g_topicServer.Publish<DateTime>("DateTimeTopic",rtc.now());
+  ButtonCheckIsPressed();
 
 
-  if(screenManager.GetCurrentScreen() == &weekViewScreen)
-  {
-    weekViewScreen.UpdateStandardTime(String(rtc.now().minute()) + ":" + String(rtc.now().second()));
-  }
-
-  // weekViewScreen.Render();
+  screenManager.Loop();
+  delay(50);
 }

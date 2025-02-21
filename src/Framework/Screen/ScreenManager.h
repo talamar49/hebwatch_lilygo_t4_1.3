@@ -9,6 +9,8 @@ public:
     
     void Render();
 
+    void Loop();
+
     IScreen* GetCurrentScreen();
     
 private:

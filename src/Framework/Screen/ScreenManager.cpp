@@ -17,6 +17,11 @@ void ScreenManager::Render()
     m_currentScreen->Render();
 }
 
+void ScreenManager::Loop() 
+{
+    m_currentScreen->Loop();
+}
+
 IScreen* ScreenManager::GetCurrentScreen()
 {
     return m_currentScreen;

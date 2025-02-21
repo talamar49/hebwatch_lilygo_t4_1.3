@@ -21,7 +21,10 @@ public:
     inline void Subscribe(const std::string& topic, std::function<void()> callback);
 
     // Collects all topic names
-    std::vector<std::string> getTopics() const;
+    std::vector<std::string> GetTopics() const;
+
+    void PrintTopics() const ;
+
 
 private:
     // Function to handle messages of any type
@@ -72,12 +75,20 @@ inline void TopicServer::Subscribe(const std::string& topic, std::function<void(
 }
 
 // Collects all topic names
-inline std::vector<std::string> TopicServer::getTopics() const {
+inline std::vector<std::string> TopicServer::GetTopics() const {
     std::vector<std::string> topicNames;
     for (const auto& pair : subscriptions) {
         topicNames.push_back(pair.first);
     }
     return topicNames;    
+}
+
+inline void TopicServer::PrintTopics() const {
+    std::vector<std::string> topics = GetTopics();
+    std::cout << "List of Topics:" << std::endl;
+    for (const auto& topic : topics) {
+        std::cout << "- " << topic << std::endl;
+    }
 }
 
 // Helper function to call the callback with the proper type
