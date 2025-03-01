@@ -6,11 +6,34 @@ WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_
                                   m_tft(tft_),
                                   m_fex(&m_tft),
                                   m_juldate_sprite(&m_tft),
+                                  m_julTime_sprite(&m_tft),
+                                  m_julDayNMonth_sprite(&m_tft),
+                                  m_julYear_sprite(&m_tft),
                                   m_standardTime_sprite(&m_tft),
                                   m_zmanim_sprite(&m_tft)
 {
   m_topicServer.Subscribe<DateTime>("DateTimeTopic",[this](DateTime now){
     m_datetimeNow = now;
+  });
+
+  m_topicServer.Subscribe("LeftButtonLongPressTopic",[this](){
+    LeftButtonLongPressHandler();
+  });
+
+  m_topicServer.Subscribe("RightButtonLongPressTopic",[this](){
+    RightButtonLongPressHandler();
+  });
+
+  m_topicServer.Subscribe("LeftButtonShortPressTopic",[this](){
+    LeftButtonShortPressHandler();
+  });
+
+  m_topicServer.Subscribe("RightButtonShortPressTopic",[this](){
+    RightButtonShortPressHandler();
+  });
+
+  m_topicServer.Subscribe("MiddleButtonShortPressTopic",[this](){
+    MiddleButtonShortPressHandler();
   });
 }
 
@@ -25,9 +48,108 @@ void WeekViewScreen::Render()
 
 void WeekViewScreen::Loop()
 {
-  UpdateStandardTime(ToString(m_datetimeNow.hour()) + ":" + ToString(m_datetimeNow.minute()));
-  UpdateCurrJuldate({ToString(m_datetimeNow.day()),ToString(m_datetimeNow.month()),ToString(m_datetimeNow.year())});
+  if (IsInCalib()) 
+  {
+    // Determine background colors for highlighted fields
+    uint32_t hourBg = (m_timeAndDateCalibIndex == 1) ? TFT_RED : 0;
+    uint32_t minuteBg = (m_timeAndDateCalibIndex == 2) ? TFT_RED : 0;
+    uint32_t dayBg = (m_timeAndDateCalibIndex == 3) ? TFT_RED : 0;
+    uint32_t monthBg = (m_timeAndDateCalibIndex == 4) ? TFT_RED : 0;
+    uint32_t yearBg = (m_timeAndDateCalibIndex == 5) ? TFT_RED : 0;
+
+    // Update display with temporary DateTime and highlighted fields
+    UpdateStandardTime({ToString(m_tempDateTime.hour()), ToString(m_tempDateTime.minute())}, hourBg, minuteBg);
+    UpdateCurrJuldate({ToString(m_tempDateTime.day()), ToString(m_tempDateTime.month()), ToString(m_tempDateTime.year())}, dayBg, monthBg, yearBg);
+  } 
+  else 
+  {
+    UpdateStandardTime({ToString(m_datetimeNow.hour()), ToString(m_datetimeNow.minute())}, m_bgColor, m_bgColor);
+    UpdateCurrJuldate({ToString(m_datetimeNow.day()), ToString(m_datetimeNow.month()), ToString(m_datetimeNow.year())}, m_bgColor, m_bgColor, m_bgColor);
+  }
 }
+
+
+void WeekViewScreen::MiddleButtonShortPressHandler() {
+  if (m_bIsJulTimeAndDateCalib) 
+  {
+    m_timeAndDateCalibIndex++;
+    if (m_timeAndDateCalibIndex > 5) 
+    { // Exit after adjusting year
+      m_bIsJulTimeAndDateCalib = false;
+      m_timeAndDateCalibIndex = 0;
+      m_datetimeNow = m_tempDateTime; // Save the adjusted time
+      // Optionally notify the system of the new time:
+      m_topicServer.Publish<DateTime>("AdjustDateTimeTopic", m_datetimeNow);
+    }
+  }
+}
+
+void WeekViewScreen::MiddleButtonLongPressHandler()
+{
+
+}
+
+void WeekViewScreen::RightButtonShortPressHandler() {
+  if (IsInCalib()) {
+    switch (m_timeAndDateCalibIndex) {
+      case 1: // Increment hour
+        m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0);
+        break;
+      case 2: // Increment minute
+        m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0);
+        break;
+      case 3: // Increment day
+        m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0);
+        break;
+      case 4: // Increment month
+        AdjustMonth(1);
+        break;
+      case 5: // Increment year
+        AdjustYear(1);
+        break;
+    }
+  }
+}
+void WeekViewScreen::RightButtonLongPressHandler() {
+  if (!IsInCalib()) {
+    m_bIsJulTimeAndDateCalib = true;
+    m_tempDateTime = m_datetimeNow; // Initialize with current time
+    m_timeAndDateCalibIndex = 1;    // Start with hour
+  }
+}
+
+void WeekViewScreen::LeftButtonShortPressHandler() {
+  if (IsInCalib()) {
+    switch (m_timeAndDateCalibIndex) {
+      case 1: // Decrement hour
+        m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0);
+        break;
+      case 2: // Decrement minute
+        m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0);
+        break;
+      case 3: // Decrement day
+        m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0);
+        break;
+      case 4: // Decrement month
+        AdjustMonth(-1);
+        break;
+      case 5: // Decrement year
+        AdjustYear(-1);
+        break;
+    }
+  }
+}
+
+void WeekViewScreen::LeftButtonLongPressHandler()
+{
+
+}
+
+bool WeekViewScreen::IsInCalib()
+{
+  return m_bIsJulTimeAndDateCalib;
+}
+
 
 void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)
 {
@@ -36,10 +158,10 @@ void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)
   WriteString(StringObj(hebdate, TFT_WIDTH - 1, 25, 90, 15, Rubik_Light14), m_fex);
 }
 
-void WeekViewScreen::UpdateCurrJuldate(std::vector<String> curr_juldate_)
-{
-  String juldate = curr_juldate_[0]+"/"+curr_juldate_[1]+"/"+curr_juldate_[2];
-  WriteSpriteString(StringObj(juldate, 62, 25, 77, 13, Rubik_Light14), m_juldate_sprite);
+void WeekViewScreen::UpdateCurrJuldate(std::vector<String> curr_juldate_, uint32_t dayBg, uint32_t monthBg, uint32_t yearBg) {
+  WriteSpriteString(StringObj(curr_juldate_[0], 62, 25, 18, 13, Rubik_Light14), m_julDayNMonth_sprite, dayBg);
+  WriteSpriteString(StringObj(curr_juldate_[1], 86, 25, 18, 13, Rubik_Light14), m_julDayNMonth_sprite, monthBg);
+  WriteSpriteString(StringObj(curr_juldate_[2], 109, 25, 36, 13, Rubik_Light14), m_julYear_sprite, yearBg);
 }
 
 void WeekViewScreen::UpdateHebtime(const String &hebtime_)
@@ -47,9 +169,11 @@ void WeekViewScreen::UpdateHebtime(const String &hebtime_)
   WriteSpriteString(StringObj(hebtime_, 147, 5, 68, 18, Rubik_Light26), m_standardTime_sprite);
 }
 
-void WeekViewScreen::UpdateStandardTime(const String &standardtime_)
+
+void WeekViewScreen::UpdateStandardTime(std::vector<String> standardtime_, uint32_t hourBg, uint32_t minuteBg) 
 {
-  WriteSpriteString(StringObj(standardtime_, 70, 5, 68, 18, Rubik_Light26), m_standardTime_sprite);
+  WriteSpriteString(StringObj(standardtime_[0], 70, 5, 32, 18, Rubik_Light26), m_julTime_sprite, hourBg);
+  WriteSpriteString(StringObj(standardtime_[1], 106, 5, 32, 18, Rubik_Light26), m_julTime_sprite, minuteBg);
 }
 
 void WeekViewScreen::UpdateCity(String &city_)
@@ -141,9 +265,9 @@ void WeekViewScreen::TFTInitContent(void)
     // init struct
   String city = "ירושלים";
   String hebtime = "00:00";
-  String standardtime = "00:00";
+  std::vector<String> standardtime = {"00","00"};
   std::vector<String> curr_hebdate = {"כה","ניסן","תשגד"};
-  std::vector<String> curr_juldate = {"12","04","2024"};
+  std::vector<String> curr_juldate = {"00","00","0000"};
   std::vector<String> hebdates = {"כה", "כו", "כז", "כח", "כט","ל", "א"};
   std::vector<String> juldates = {"00", "00", "00", "00", "00","00","00"};
   std::vector<String> sunrise = {"06:42", "06:43", "06:45", "06:48", "06:48","06:50","06:51"};
@@ -228,10 +352,62 @@ void WeekViewScreen::TFTInitUIFrame(void)
   // city name delimiter
   m_tft.drawLine(juldate_lim, 0, juldate_lim, 40, m_lineColor);
 
+  // jul date delim
+  WriteTFTString(StringObj("/", 80, 25, 0, 0, Rubik_Light14),m_tft);
+  WriteTFTString(StringObj("/", 103, 25, 0, 0, Rubik_Light14),m_tft);
+
+  // jul time delim
+  WriteTFTString(StringObj(":", 101, 5, 0, 0, Rubik_Light26), m_tft);
+
   // days in hebrew
   std::vector<String> days = {"א", "ב", "ג", "ד", "ה","ו", "ז"};
   WriteToCols(StringArrObj(days, TFT_WIDTH - 5, 7, 15 ,15,Rubik_Light28), m_fex);
 
   WriteString(StringObj("שעה", TFT_WIDTH - 2, 5, 10, 10, Rubik_Light10), m_fex);
   WriteString(StringObj("זמנית", TFT_WIDTH - 2, 15, 10, 10, Rubik_Light10), m_fex);
+}
+
+void WeekViewScreen::AdjustMonth(int delta) 
+{
+    uint16_t year = m_tempDateTime.year();
+    uint8_t month = m_tempDateTime.month() + delta;
+    uint8_t day = m_tempDateTime.day();
+
+    // Handle overflow/underflow
+    if (delta > 0) {
+    while (month > 12) { month -= 12; year++; }
+    } else {
+    while (month < 1) { month += 12; year--; }
+    }
+
+    // Clamp day to the new month's maximum
+    uint8_t maxDay = DaysInGivenMonth(year, month);
+    if (day > maxDay) day = maxDay;
+
+    m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
+}
+
+void WeekViewScreen::AdjustYear(int delta) 
+{
+    uint16_t year = m_tempDateTime.year() + delta;
+    uint8_t month = m_tempDateTime.month();
+    uint8_t day = m_tempDateTime.day();
+
+    // Clamp day to the new year's February
+    uint8_t maxDay = DaysInGivenMonth(year, month);
+    if (day > maxDay) day = maxDay;
+
+    m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
+}
+
+// Include DaysInGivenMonth and IsLeapYear from earlier if not already present
+uint8_t WeekViewScreen::DaysInGivenMonth(uint16_t year, uint8_t month) 
+{
+    static const uint8_t days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+    return (month == 2 && IsLeapYear(year)) ? 29 : days[month - 1];
+}
+
+bool WeekViewScreen::IsLeapYear(uint16_t year) 
+{
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }

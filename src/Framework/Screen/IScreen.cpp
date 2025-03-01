@@ -47,18 +47,34 @@ void IScreen::WriteSpriteToCols(const StringArrObj& strArrObj_, TFT_eSprite& tft
   }
 }
 
-void IScreen::WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite_)
+void IScreen::WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite_, const uint32_t bgColor_)
 {
   tftSprite_.loadFont(strObj_.font);
 
   tftSprite_.createSprite(strObj_.width, strObj_.height);
   tftSprite_.setTextColor(m_textColor, m_bgColor);
-  tftSprite_.fillScreen(m_bgColor);
+  if(bgColor_ == 0)
+  {
+    tftSprite_.fillScreen(m_bgColor);
+  }
+  else
+  {
+    tftSprite_.fillScreen(bgColor_);
+  }
   
   tftSprite_.drawString(strObj_.str, 0, 0);
   tftSprite_.pushSprite(strObj_.x, strObj_.y);
 
   tftSprite_.unloadFont();
+}
+
+void IScreen::WriteTFTString(const StringObj& strObj_, TFT_eSPI& tft_)
+{
+  tft_.loadFont(strObj_.font);
+
+  tft_.drawString(strObj_.str, strObj_.x, strObj_.y);
+
+  tft_.unloadFont();
 }
 
 void IScreen::DrawColVerticalLine(int x_, TFT_eSPI tft_)

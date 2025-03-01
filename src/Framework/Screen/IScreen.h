@@ -20,11 +20,13 @@ public:
     virtual void Render() = 0;
     virtual void Loop() = 0;
 
-    void WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite_);
+    void WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite_, const uint32_t bgColor_ = 0);
     void WriteSpriteToCols(const StringArrObj& strArrObj_, TFT_eSprite& tftSprite_);
 
     void WriteString(const StringObj& str_, TFT_eFEX& fex_);
     void WriteToCols(const StringArrObj& str_vec_, TFT_eFEX& fex_);
+
+    void WriteTFTString(const StringObj& strObj_, TFT_eSPI& tft_);
 
     void DrawColVerticalLine(int x_, TFT_eSPI tft_);
     void DrawColHorizontalLine(int y_, TFT_eSPI tft_);
@@ -33,8 +35,8 @@ public:
 
 protected:
     TopicServer& m_topicServer;
-
     const uint32_t m_bgColor;
+
     const uint32_t m_textColor;
     const uint32_t m_lineColor;
 

@@ -32,6 +32,10 @@ void setup()
 
   ButtonInitialize(g_topicServer);
 
+  g_topicServer.Subscribe<DateTime>("AdjustDateTimeTopic",[](DateTime adjustTime){
+    rtc.adjust(adjustTime);
+  });
+
   g_topicServer.Subscribe("RightButtonShortPressTopic",[](){
     std::cout << "RightButtonShortPressTopic" << std::endl;
   });
@@ -57,12 +61,10 @@ void setup()
 void loop() 
 {
   static WeekViewScreen weekViewScreen(g_tft, g_topicServer);
-  static SettingsScreen settingsScreen(g_tft, g_topicServer);
-  static ScreenManager screenManager(&settingsScreen);
+  static ScreenManager screenManager(&weekViewScreen);
   
   g_topicServer.Publish<DateTime>("DateTimeTopic",rtc.now());
   ButtonCheckIsPressed();
-
 
   screenManager.Loop();
   delay(50);
