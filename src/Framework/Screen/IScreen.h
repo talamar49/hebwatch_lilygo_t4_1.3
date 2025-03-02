@@ -23,7 +23,7 @@ public:
     void WriteSpriteString(const StringObj& strObj_, TFT_eSprite& tftSprite_, const uint32_t bgColor_ = 0);
     void WriteSpriteToCols(const StringArrObj& strArrObj_, TFT_eSprite& tftSprite_);
 
-    void WriteString(const StringObj& str_, TFT_eFEX& fex_);
+    void WriteString(const StringObj& str_, TFT_eFEX& fex_, const uint32_t bgColor_ = 0);
     void WriteToCols(const StringArrObj& str_vec_, TFT_eFEX& fex_);
 
     void WriteTFTString(const StringObj& strObj_, TFT_eSPI& tft_);

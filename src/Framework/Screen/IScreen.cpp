@@ -23,12 +23,21 @@ void IScreen::WriteToCols(const StringArrObj& strArrObj_, TFT_eFEX& fex_)
 }
 
 
-void IScreen::WriteString(const StringObj& strObj_, TFT_eFEX& fex_)
+void IScreen::WriteString(const StringObj& strObj_, TFT_eFEX& fex_, const uint32_t bgColor_)
 {
   fex_.GetESpi()->loadFont(strObj_.font);
   
   fex_.setTextColor(m_textColor, m_bgColor);
-  fex_.fillRect(strObj_.x - strObj_.width, strObj_.y, strObj_.width, strObj_.height, m_bgColor); // renderer
+
+  if(bgColor_ == 0)
+  {
+    fex_.fillRect(strObj_.x - strObj_.width, strObj_.y, strObj_.width, strObj_.height, m_bgColor); 
+  }
+  else
+  {
+    fex_.fillRect(strObj_.x - strObj_.width, strObj_.y, strObj_.width, strObj_.height, bgColor_); 
+  }
+
   fex_.setCursorRTL(strObj_.x, strObj_.y);
   fex_.drawStringRTL(strObj_.str);
 

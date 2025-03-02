@@ -1,4 +1,5 @@
 #include "Screens/WeekViewScreen.h"
+#include <EEPROM.h>
 
 
 WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
@@ -12,6 +13,14 @@ WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_
                                   m_standardTime_sprite(&m_tft),
                                   m_zmanim_sprite(&m_tft)
 {
+
+  m_currentCity = LoadCityFromEEPROM();
+
+  m_cityIt = CITY_MAP.find(m_currentCity);
+  if(m_cityIt == CITY_MAP.end()) { // If not found, start at beginning
+      m_cityIt = CITY_MAP.begin();
+  }
+
   m_topicServer.Subscribe<DateTime>("DateTimeTopic",[this](DateTime now){
     m_datetimeNow = now;
   });
@@ -44,33 +53,92 @@ void WeekViewScreen::Render()
     
   TFTInitUIFrame();
   TFTInitContent();
+
+  m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_cityIt->second);
 }
 
 void WeekViewScreen::Loop()
 {
   if (IsInCalib()) 
   {
-    // Determine background colors for highlighted fields
-    uint32_t hourBg = (m_timeAndDateCalibIndex == 1) ? TFT_RED : 0;
-    uint32_t minuteBg = (m_timeAndDateCalibIndex == 2) ? TFT_RED : 0;
-    uint32_t dayBg = (m_timeAndDateCalibIndex == 3) ? TFT_RED : 0;
-    uint32_t monthBg = (m_timeAndDateCalibIndex == 4) ? TFT_RED : 0;
-    uint32_t yearBg = (m_timeAndDateCalibIndex == 5) ? TFT_RED : 0;
-
-    // Update display with temporary DateTime and highlighted fields
-    UpdateStandardTime({ToString(m_tempDateTime.hour()), ToString(m_tempDateTime.minute())}, hourBg, minuteBg);
-    UpdateCurrJuldate({ToString(m_tempDateTime.day()), ToString(m_tempDateTime.month()), ToString(m_tempDateTime.year())}, dayBg, monthBg, yearBg);
+    if(m_bIsCityCalib)
+    {
+      LoopLogic();
+    }
+    else if(m_bIsJulTimeAndDateCalib)
+    {
+      CalibLogic();
+    }
   } 
   else 
   {
-    UpdateStandardTime({ToString(m_datetimeNow.hour()), ToString(m_datetimeNow.minute())}, m_bgColor, m_bgColor);
-    UpdateCurrJuldate({ToString(m_datetimeNow.day()), ToString(m_datetimeNow.month()), ToString(m_datetimeNow.year())}, m_bgColor, m_bgColor, m_bgColor);
+    LoopLogic();
   }
 }
 
+String WeekViewScreen::LoadCityFromEEPROM() 
+{
+    int len = EEPROM.read(EEPROM_CITY_ADDR);
+    
+    // Validate length
+    if(len <= 0 || len > MAX_CITY_LENGTH) {
+        return CITY_MAP.begin()->first; // Return default
+    }
+    
+    String city;
+    for(int i = 0; i < len; i++) {
+        city += static_cast<char>(EEPROM.read(EEPROM_CITY_ADDR + 1 + i));
+    }
+    return city;
+}
+
+void WeekViewScreen::SaveCityToEEPROM(const String& city) {
+    // Clear previous data
+    for(int i = 0; i < MAX_CITY_LENGTH + 1; i++) {
+        EEPROM.write(EEPROM_CITY_ADDR + i, 0);
+    }
+    
+    // Write new data
+    EEPROM.write(EEPROM_CITY_ADDR, city.length());
+    for(int i = 0; i < city.length(); i++) {
+        EEPROM.write(EEPROM_CITY_ADDR + 1 + i, city[i]);
+    }
+    
+    EEPROM.commit();
+}
+
+void WeekViewScreen::CalibLogic()
+{
+  // Determine background colors for highlighted fields
+  uint32_t hourBg = (m_timeAndDateCalibIndex == 1) ? m_calibBgColor : 0;
+  uint32_t minuteBg = (m_timeAndDateCalibIndex == 2) ? m_calibBgColor : 0;
+  uint32_t dayBg = (m_timeAndDateCalibIndex == 3) ? m_calibBgColor : 0;
+  uint32_t monthBg = (m_timeAndDateCalibIndex == 4) ? m_calibBgColor : 0;
+  uint32_t yearBg = (m_timeAndDateCalibIndex == 5) ? m_calibBgColor : 0;
+
+  // Update display with temporary DateTime and highlighted fields
+  UpdateStandardTime({ToString(m_tempDateTime.hour()), ToString(m_tempDateTime.minute())}, hourBg, minuteBg);
+  UpdateCurrJuldate({ToString(m_tempDateTime.day()), ToString(m_tempDateTime.month()), ToString(m_tempDateTime.year())}, dayBg, monthBg, yearBg);
+}
+
+void WeekViewScreen::LoopLogic()
+{
+  UpdateStandardTime({ToString(m_datetimeNow.hour()), ToString(m_datetimeNow.minute())}, m_bgColor, m_bgColor);
+  UpdateCurrJuldate({ToString(m_datetimeNow.day()), ToString(m_datetimeNow.month()), ToString(m_datetimeNow.year())}, m_bgColor, m_bgColor, m_bgColor);
+}
 
 void WeekViewScreen::MiddleButtonShortPressHandler() {
-  if (m_bIsJulTimeAndDateCalib) 
+  if (m_bIsCityCalib) 
+  {
+    m_bIsCityCalib = false;
+    m_currentCity = m_cityIt->first;
+    SaveCityToEEPROM(m_currentCity); // Save to EEPROM
+    UpdateCity();
+
+    CityCoord coords = m_cityIt->second;
+    m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", coords);
+  }
+  else if(m_bIsJulTimeAndDateCalib) 
   {
     m_timeAndDateCalibIndex++;
     if (m_timeAndDateCalibIndex > 5) 
@@ -90,23 +158,36 @@ void WeekViewScreen::MiddleButtonLongPressHandler()
 }
 
 void WeekViewScreen::RightButtonShortPressHandler() {
-  if (IsInCalib()) {
-    switch (m_timeAndDateCalibIndex) {
-      case 1: // Increment hour
-        m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0);
-        break;
-      case 2: // Increment minute
-        m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0);
-        break;
-      case 3: // Increment day
-        m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0);
-        break;
-      case 4: // Increment month
-        AdjustMonth(1);
-        break;
-      case 5: // Increment year
-        AdjustYear(1);
-        break;
+  if (IsInCalib()) 
+  {
+    if(m_bIsCityCalib)
+    {
+      if(++m_cityIt == CITY_MAP.end()) 
+      {
+        m_cityIt = CITY_MAP.begin();
+      }
+      m_currentCity = m_cityIt->first;
+      UpdateCity(m_calibBgColor);
+    }
+    else if(m_bIsJulTimeAndDateCalib)
+    {
+      switch (m_timeAndDateCalibIndex) {
+        case 1: // Increment hour
+          m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0);
+          break;
+        case 2: // Increment minute
+          m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0);
+          break;
+        case 3: // Increment day
+          m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0);
+          break;
+        case 4: // Increment month
+          AdjustMonth(1);
+          break;
+        case 5: // Increment year
+          AdjustYear(1);
+          break;
+      }
     }
   }
 }
@@ -119,35 +200,59 @@ void WeekViewScreen::RightButtonLongPressHandler() {
 }
 
 void WeekViewScreen::LeftButtonShortPressHandler() {
-  if (IsInCalib()) {
-    switch (m_timeAndDateCalibIndex) {
-      case 1: // Decrement hour
-        m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0);
-        break;
-      case 2: // Decrement minute
-        m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0);
-        break;
-      case 3: // Decrement day
-        m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0);
-        break;
-      case 4: // Decrement month
-        AdjustMonth(-1);
-        break;
-      case 5: // Decrement year
-        AdjustYear(-1);
-        break;
+  if (IsInCalib()) 
+  {
+    if(m_bIsCityCalib)
+    {
+      // Move to previous city
+      if(m_cityIt == CITY_MAP.begin()) {
+          m_cityIt = CITY_MAP.end();
+      }
+      --m_cityIt;
+
+      m_currentCity = m_cityIt->first;
+      UpdateCity(m_calibBgColor);
+    }
+    else if(m_bIsJulTimeAndDateCalib)
+    {
+      switch (m_timeAndDateCalibIndex) {
+        case 1: // Decrement hour
+          m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0);
+          break;
+        case 2: // Decrement minute
+          m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0);
+          break;
+        case 3: // Decrement day
+          m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0);
+          break;
+        case 4: // Decrement month
+          AdjustMonth(-1);
+          break;
+        case 5: // Decrement year
+          AdjustYear(-1);
+          break;
+      }
     }
   }
 }
 
 void WeekViewScreen::LeftButtonLongPressHandler()
 {
-
+  if (!IsInCalib()) 
+  {
+    m_bIsCityCalib = true;
+    m_cityIt = CITY_MAP.find(m_currentCity);
+    if(m_cityIt == CITY_MAP.end()) { // If not found, start at beginning
+        m_cityIt = CITY_MAP.begin();
+    }
+    m_currentCity = m_cityIt->first;
+    UpdateCity(m_calibBgColor);
+  }
 }
 
 bool WeekViewScreen::IsInCalib()
 {
-  return m_bIsJulTimeAndDateCalib;
+  return m_bIsJulTimeAndDateCalib || m_bIsCityCalib;
 }
 
 
@@ -176,9 +281,24 @@ void WeekViewScreen::UpdateStandardTime(std::vector<String> standardtime_, uint3
   WriteSpriteString(StringObj(standardtime_[1], 106, 5, 32, 18, Rubik_Light26), m_julTime_sprite, minuteBg);
 }
 
-void WeekViewScreen::UpdateCity(String &city_)
+void WeekViewScreen::UpdateCity(uint32_t cityBg)
 {
-  WriteString(StringObj(city_, 58, 10, 55, 20, Rubik_Light20), m_fex);
+  int spaceIndex = m_currentCity.indexOf(' '); // Check for space in the string
+  
+  if (spaceIndex != -1) { // If space exists
+    // Split into two parts
+    String firstPart = m_currentCity.substring(0, spaceIndex);
+    String secondPart = m_currentCity.substring(spaceIndex + 1);
+
+    // First line (original position)
+    WriteString(StringObj(firstPart, 58, 3, 57, 35, Rubik_Light20), m_fex, cityBg);
+    
+    // Second line (one row below - adjust Y position based on font height)
+    WriteString(StringObj(secondPart, 58, 18, 0, 0, Rubik_Light20), m_fex, cityBg);
+  } else { 
+    // No space - original single-line implementation
+    WriteString(StringObj(m_currentCity, 58, 3, 57, 35, Rubik_Light20), m_fex, cityBg);
+  }
 }
 
 void WeekViewScreen::UpdateHebdates(std::vector<String> hebdates_)
@@ -263,7 +383,7 @@ void WeekViewScreen::UpdateParasha(const String &parash_)
 void WeekViewScreen::TFTInitContent(void)
 {
     // init struct
-  String city = "ירושלים";
+  String city = "תל אביב";
   String hebtime = "00:00";
   std::vector<String> standardtime = {"00","00"};
   std::vector<String> curr_hebdate = {"כה","ניסן","תשגד"};
@@ -288,7 +408,7 @@ void WeekViewScreen::TFTInitContent(void)
   UpdateHebtime(hebtime);
   UpdateStandardTime(standardtime);
 
-  UpdateCity(city);
+  UpdateCity();
 
   UpdateHebdates(hebdates);
   UpdateJuldates(juldates);
