@@ -14,6 +14,8 @@
 TFT_eSPI g_tft = TFT_eSPI();
 TopicServer g_topicServer;
 
+void IOCheck();
+
 void setup() 
 {
   Serial.begin(115200);
@@ -26,16 +28,20 @@ void setup()
   g_tft.init();
 }
 
-
 void loop() 
 {
   static WeekViewScreen weekViewScreen(g_tft, g_topicServer);
   static ScreenManager screenManager(&weekViewScreen);
   
-  ButtonCheckIsPressed();
-  RTCPublishData();
-
+  IOCheck();
+  
   screenManager.Loop();
 
   delay(50);
+}
+
+void IOCheck()
+{
+  ButtonCheckIsPressed();
+  RTCPublishData();
 }

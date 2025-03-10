@@ -61,13 +61,13 @@ void WeekViewScreen::Loop()
 {
   if (IsInCalib()) 
   {
-    if(m_bIsCityCalib)
+    if(m_bIsInCityCalib)
     {
       LoopLogic();
     }
-    else if(m_bIsJulTimeAndDateCalib)
+    else if(m_bIsInDateTimeCalib)
     {
-      CalibLogic();
+      DateTimeCalibLogic();
     }
   } 
   else 
@@ -107,7 +107,7 @@ void WeekViewScreen::SaveCityToEEPROM(const String& city) {
     EEPROM.commit();
 }
 
-void WeekViewScreen::CalibLogic()
+void WeekViewScreen::DateTimeCalibLogic()
 {
   // Determine background colors for highlighted fields
   uint32_t hourBg = (m_timeAndDateCalibIndex == 1) ? m_calibBgColor : 0;
@@ -127,10 +127,11 @@ void WeekViewScreen::LoopLogic()
   UpdateCurrJuldate({ToString(m_datetimeNow.day()), ToString(m_datetimeNow.month()), ToString(m_datetimeNow.year())}, m_bgColor, m_bgColor, m_bgColor);
 }
 
-void WeekViewScreen::MiddleButtonShortPressHandler() {
-  if (m_bIsCityCalib) 
+void WeekViewScreen::MiddleButtonShortPressHandler() 
+{
+  if (m_bIsInCityCalib) 
   {
-    m_bIsCityCalib = false;
+    m_bIsInCityCalib = false;
     m_currentCity = m_cityIt->first;
     SaveCityToEEPROM(m_currentCity); // Save to EEPROM
     UpdateCity();
@@ -138,12 +139,12 @@ void WeekViewScreen::MiddleButtonShortPressHandler() {
     CityCoord coords = m_cityIt->second;
     m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", coords);
   }
-  else if(m_bIsJulTimeAndDateCalib) 
+  else if(m_bIsInDateTimeCalib) 
   {
     m_timeAndDateCalibIndex++;
     if (m_timeAndDateCalibIndex > 5) 
     { // Exit after adjusting year
-      m_bIsJulTimeAndDateCalib = false;
+      m_bIsInDateTimeCalib = false;
       m_timeAndDateCalibIndex = 0;
       m_datetimeNow = m_tempDateTime; // Save the adjusted time
       // Optionally notify the system of the new time:
@@ -157,10 +158,11 @@ void WeekViewScreen::MiddleButtonLongPressHandler()
 
 }
 
-void WeekViewScreen::RightButtonShortPressHandler() {
+void WeekViewScreen::RightButtonShortPressHandler() 
+{
   if (IsInCalib()) 
   {
-    if(m_bIsCityCalib)
+    if(m_bIsInCityCalib)
     {
       if(++m_cityIt == CITY_MAP.end()) 
       {
@@ -169,7 +171,7 @@ void WeekViewScreen::RightButtonShortPressHandler() {
       m_currentCity = m_cityIt->first;
       UpdateCity(m_calibBgColor);
     }
-    else if(m_bIsJulTimeAndDateCalib)
+    else if(m_bIsInDateTimeCalib)
     {
       switch (m_timeAndDateCalibIndex) {
         case 1: // Increment hour
@@ -193,7 +195,7 @@ void WeekViewScreen::RightButtonShortPressHandler() {
 }
 void WeekViewScreen::RightButtonLongPressHandler() {
   if (!IsInCalib()) {
-    m_bIsJulTimeAndDateCalib = true;
+    m_bIsInDateTimeCalib = true;
     m_tempDateTime = m_datetimeNow; // Initialize with current time
     m_timeAndDateCalibIndex = 1;    // Start with hour
   }
@@ -202,7 +204,7 @@ void WeekViewScreen::RightButtonLongPressHandler() {
 void WeekViewScreen::LeftButtonShortPressHandler() {
   if (IsInCalib()) 
   {
-    if(m_bIsCityCalib)
+    if(m_bIsInCityCalib)
     {
       // Move to previous city
       if(m_cityIt == CITY_MAP.begin()) {
@@ -213,7 +215,7 @@ void WeekViewScreen::LeftButtonShortPressHandler() {
       m_currentCity = m_cityIt->first;
       UpdateCity(m_calibBgColor);
     }
-    else if(m_bIsJulTimeAndDateCalib)
+    else if(m_bIsInDateTimeCalib)
     {
       switch (m_timeAndDateCalibIndex) {
         case 1: // Decrement hour
@@ -240,7 +242,7 @@ void WeekViewScreen::LeftButtonLongPressHandler()
 {
   if (!IsInCalib()) 
   {
-    m_bIsCityCalib = true;
+    m_bIsInCityCalib = true;
     m_cityIt = CITY_MAP.find(m_currentCity);
     if(m_cityIt == CITY_MAP.end()) { // If not found, start at beginning
         m_cityIt = CITY_MAP.begin();
@@ -252,7 +254,7 @@ void WeekViewScreen::LeftButtonLongPressHandler()
 
 bool WeekViewScreen::IsInCalib()
 {
-  return m_bIsJulTimeAndDateCalib || m_bIsCityCalib;
+  return m_bIsInDateTimeCalib || m_bIsInCityCalib;
 }
 
 
@@ -489,45 +491,45 @@ void WeekViewScreen::TFTInitUIFrame(void)
 
 void WeekViewScreen::AdjustMonth(int delta) 
 {
-    uint16_t year = m_tempDateTime.year();
-    uint8_t month = m_tempDateTime.month() + delta;
-    uint8_t day = m_tempDateTime.day();
+  uint16_t year = m_tempDateTime.year();
+  uint8_t month = m_tempDateTime.month() + delta;
+  uint8_t day = m_tempDateTime.day();
 
-    // Handle overflow/underflow
-    if (delta > 0) {
-    while (month > 12) { month -= 12; year++; }
-    } else {
-    while (month < 1) { month += 12; year--; }
-    }
+  // Handle overflow/underflow
+  if (delta > 0) {
+  while (month > 12) { month -= 12; year++; }
+  } else {
+  while (month < 1) { month += 12; year--; }
+  }
 
-    // Clamp day to the new month's maximum
-    uint8_t maxDay = DaysInGivenMonth(year, month);
-    if (day > maxDay) day = maxDay;
+  // Clamp day to the new month's maximum
+  uint8_t maxDay = DaysInGivenMonth(year, month);
+  if (day > maxDay) day = maxDay;
 
-    m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
+  m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
 }
 
 void WeekViewScreen::AdjustYear(int delta) 
 {
-    uint16_t year = m_tempDateTime.year() + delta;
-    uint8_t month = m_tempDateTime.month();
-    uint8_t day = m_tempDateTime.day();
+  uint16_t year = m_tempDateTime.year() + delta;
+  uint8_t month = m_tempDateTime.month();
+  uint8_t day = m_tempDateTime.day();
 
-    // Clamp day to the new year's February
-    uint8_t maxDay = DaysInGivenMonth(year, month);
-    if (day > maxDay) day = maxDay;
+  // Clamp day to the new year's February
+  uint8_t maxDay = DaysInGivenMonth(year, month);
+  if (day > maxDay) day = maxDay;
 
-    m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
+  m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
 }
 
 // Include DaysInGivenMonth and IsLeapYear from earlier if not already present
 uint8_t WeekViewScreen::DaysInGivenMonth(uint16_t year, uint8_t month) 
 {
-    static const uint8_t days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-    return (month == 2 && IsLeapYear(year)) ? 29 : days[month - 1];
+  static const uint8_t days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+  return (month == 2 && IsLeapYear(year)) ? 29 : days[month - 1];
 }
 
 bool WeekViewScreen::IsLeapYear(uint16_t year) 
 {
-    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+  return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }

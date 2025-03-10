@@ -34,8 +34,8 @@ private:
     DateTime m_datetimeNow;
     DateTime m_tempDateTime; // Store temporary DateTime during calibration
 
-    bool m_bIsJulTimeAndDateCalib = false;
-    bool m_bIsCityCalib = false;
+    bool m_bIsInDateTimeCalib = false;
+    bool m_bIsInCityCalib = false;
     unsigned int m_timeAndDateCalibIndex = 0;
     int m_hourChangeCalib = 0;
     int m_minChangeCalib = 0;
@@ -59,7 +59,7 @@ private:
     void UpdateParasha(const String &parash_);
 
     bool IsInCalib();
-    void CalibLogic();
+    void DateTimeCalibLogic();
     void LoopLogic();
 
     void MiddleButtonShortPressHandler();
