@@ -1,262 +1,66 @@
+// WeekViewScreen.cpp
 #include "Screens/WeekViewScreen.h"
-#include <EEPROM.h>
-
 
 WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_t bgColor_, uint32_t textColor_, uint32_t lineColor_, uint32_t numOfLines_)
-                                : IScreen(topicServer_, bgColor_, textColor_, lineColor_, numOfLines_),
-                                  m_tft(tft_),
-                                  m_fex(&m_tft),
-                                  m_juldate_sprite(&m_tft),
-                                  m_julTime_sprite(&m_tft),
-                                  m_julDayNMonth_sprite(&m_tft),
-                                  m_julYear_sprite(&m_tft),
-                                  m_standardTime_sprite(&m_tft),
-                                  m_zmanim_sprite(&m_tft)
+    : IScreen(topicServer_, bgColor_, textColor_, lineColor_, numOfLines_),
+      m_tft(tft_),
+      m_fex(&m_tft),
+      m_juldate_sprite(&m_tft),
+      m_julTime_sprite(&m_tft),
+      m_julDayNMonth_sprite(&m_tft),
+      m_julYear_sprite(&m_tft),
+      m_standardTime_sprite(&m_tft),
+      m_zmanim_sprite(&m_tft),
+      m_logic(topicServer_)
 {
+  m_topicServer.Subscribe<CityCoord>("SelectedCityCoordsTopic", [this](CityCoord cityCoord) {
+    uint32_t cityBg = 0; 
+    
+    if(m_logic.IsInCityCalib())
+    {
+      cityBg = m_calibBgColor;
+    }
 
-  m_currentCity = LoadCityFromEEPROM();
-
-  m_cityIt = CITY_MAP.find(m_currentCity);
-  if(m_cityIt == CITY_MAP.end()) { // If not found, start at beginning
-      m_cityIt = CITY_MAP.begin();
-  }
-
-  m_topicServer.Subscribe<DateTime>("DateTimeTopic",[this](DateTime now){
-    m_datetimeNow = now;
-  });
-
-  m_topicServer.Subscribe("LeftButtonLongPressTopic",[this](){
-    LeftButtonLongPressHandler();
-  });
-
-  m_topicServer.Subscribe("RightButtonLongPressTopic",[this](){
-    RightButtonLongPressHandler();
-  });
-
-  m_topicServer.Subscribe("LeftButtonShortPressTopic",[this](){
-    LeftButtonShortPressHandler();
-  });
-
-  m_topicServer.Subscribe("RightButtonShortPressTopic",[this](){
-    RightButtonShortPressHandler();
-  });
-
-  m_topicServer.Subscribe("MiddleButtonShortPressTopic",[this](){
-    MiddleButtonShortPressHandler();
+    UpdateCity(cityBg);
   });
 }
 
 void WeekViewScreen::Render()
 {
-  m_tft.setTextColor(m_textColor, m_bgColor);
-  m_tft.fillScreen(m_bgColor);
-    
-  TFTInitUIFrame();
-  TFTInitContent();
-
-  m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_cityIt->second);
+    m_tft.setTextColor(m_textColor, m_bgColor);
+    m_tft.fillScreen(m_bgColor);
+    TFTInitUIFrame();
+    TFTInitContent();
+    m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_logic.GetCurrentCityCoord());
 }
 
 void WeekViewScreen::Loop()
 {
-  if (IsInCalib()) 
-  {
-    if(m_bIsInCityCalib)
-    {
-      LoopLogic();
-    }
-    else if(m_bIsInDateTimeCalib)
-    {
-      DateTimeCalibLogic();
-    }
-  } 
-  else 
-  {
-    LoopLogic();
-  }
-}
-
-String WeekViewScreen::LoadCityFromEEPROM() 
-{
-    int len = EEPROM.read(EEPROM_CITY_ADDR);
+    m_logic.OnLoop();
     
-    // Validate length
-    if(len <= 0 || len > MAX_CITY_LENGTH) {
-        return CITY_MAP.begin()->first; // Return default
-    }
+    m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
     
-    String city;
-    for(int i = 0; i < len; i++) {
-        city += static_cast<char>(EEPROM.read(EEPROM_CITY_ADDR + 1 + i));
-    }
-    return city;
+    DateTime current = m_logic.IsInDateTimeCalib() ? m_logic.GetTempDateTime() : m_logic.GetCurrentDateTime();
+
+    UpdateCalibrationLogic();
+
+    UpdateStandardTime({ToString(current.hour()), ToString(current.minute())}, m_hourBg, m_minuteBg);
+    UpdateCurrJuldate({ToString(current.day()), ToString(current.month()), ToString(current.year())}, m_dayBg, m_monthBg, m_yearBg);
 }
 
-void WeekViewScreen::SaveCityToEEPROM(const String& city) {
-    // Clear previous data
-    for(int i = 0; i < MAX_CITY_LENGTH + 1; i++) {
-        EEPROM.write(EEPROM_CITY_ADDR + i, 0);
-    }
-    
-    // Write new data
-    EEPROM.write(EEPROM_CITY_ADDR, city.length());
-    for(int i = 0; i < city.length(); i++) {
-        EEPROM.write(EEPROM_CITY_ADDR + 1 + i, city[i]);
-    }
-    
-    EEPROM.commit();
-}
-
-void WeekViewScreen::DateTimeCalibLogic()
+void WeekViewScreen::UpdateCalibrationLogic()
 {
-  // Determine background colors for highlighted fields
-  uint32_t hourBg = (m_timeAndDateCalibIndex == 1) ? m_calibBgColor : 0;
-  uint32_t minuteBg = (m_timeAndDateCalibIndex == 2) ? m_calibBgColor : 0;
-  uint32_t dayBg = (m_timeAndDateCalibIndex == 3) ? m_calibBgColor : 0;
-  uint32_t monthBg = (m_timeAndDateCalibIndex == 4) ? m_calibBgColor : 0;
-  uint32_t yearBg = (m_timeAndDateCalibIndex == 5) ? m_calibBgColor : 0;
-
-  // Update display with temporary DateTime and highlighted fields
-  UpdateStandardTime({ToString(m_tempDateTime.hour()), ToString(m_tempDateTime.minute())}, hourBg, minuteBg);
-  UpdateCurrJuldate({ToString(m_tempDateTime.day()), ToString(m_tempDateTime.month()), ToString(m_tempDateTime.year())}, dayBg, monthBg, yearBg);
-}
-
-void WeekViewScreen::LoopLogic()
-{
-  UpdateStandardTime({ToString(m_datetimeNow.hour()), ToString(m_datetimeNow.minute())}, m_bgColor, m_bgColor);
-  UpdateCurrJuldate({ToString(m_datetimeNow.day()), ToString(m_datetimeNow.month()), ToString(m_datetimeNow.year())}, m_bgColor, m_bgColor, m_bgColor);
-}
-
-void WeekViewScreen::MiddleButtonShortPressHandler() 
-{
-  if (m_bIsInCityCalib) 
-  {
-    m_bIsInCityCalib = false;
-    m_currentCity = m_cityIt->first;
-    SaveCityToEEPROM(m_currentCity); // Save to EEPROM
-    UpdateCity();
-
-    CityCoord coords = m_cityIt->second;
-    m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", coords);
-  }
-  else if(m_bIsInDateTimeCalib) 
-  {
-    m_timeAndDateCalibIndex++;
-    if (m_timeAndDateCalibIndex > 5) 
-    { // Exit after adjusting year
-      m_bIsInDateTimeCalib = false;
-      m_timeAndDateCalibIndex = 0;
-      m_datetimeNow = m_tempDateTime; // Save the adjusted time
-      // Optionally notify the system of the new time:
-      m_topicServer.Publish<DateTime>("AdjustDateTimeTopic", m_datetimeNow);
-    }
-  }
-}
-
-void WeekViewScreen::MiddleButtonLongPressHandler()
-{
-
-}
-
-void WeekViewScreen::RightButtonShortPressHandler() 
-{
-  if (IsInCalib()) 
-  {
-    if(m_bIsInCityCalib)
-    {
-      if(++m_cityIt == CITY_MAP.end()) 
-      {
-        m_cityIt = CITY_MAP.begin();
+  
+  if (m_logic.IsInDateTimeCalib()) {
+      switch (m_logic.GetCalibIndex()) {
+          case 1: m_hourBg = m_calibBgColor; break;
+          case 2: m_minuteBg = m_calibBgColor; break;
+          case 3: m_dayBg = m_calibBgColor; break;
+          case 4: m_monthBg = m_calibBgColor; break;
+          case 5: m_yearBg = m_calibBgColor; break;
       }
-      m_currentCity = m_cityIt->first;
-      UpdateCity(m_calibBgColor);
-    }
-    else if(m_bIsInDateTimeCalib)
-    {
-      switch (m_timeAndDateCalibIndex) {
-        case 1: // Increment hour
-          m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0);
-          break;
-        case 2: // Increment minute
-          m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0);
-          break;
-        case 3: // Increment day
-          m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0);
-          break;
-        case 4: // Increment month
-          AdjustMonth(1);
-          break;
-        case 5: // Increment year
-          AdjustYear(1);
-          break;
-      }
-    }
   }
 }
-void WeekViewScreen::RightButtonLongPressHandler() {
-  if (!IsInCalib()) {
-    m_bIsInDateTimeCalib = true;
-    m_tempDateTime = m_datetimeNow; // Initialize with current time
-    m_timeAndDateCalibIndex = 1;    // Start with hour
-  }
-}
-
-void WeekViewScreen::LeftButtonShortPressHandler() {
-  if (IsInCalib()) 
-  {
-    if(m_bIsInCityCalib)
-    {
-      // Move to previous city
-      if(m_cityIt == CITY_MAP.begin()) {
-          m_cityIt = CITY_MAP.end();
-      }
-      --m_cityIt;
-
-      m_currentCity = m_cityIt->first;
-      UpdateCity(m_calibBgColor);
-    }
-    else if(m_bIsInDateTimeCalib)
-    {
-      switch (m_timeAndDateCalibIndex) {
-        case 1: // Decrement hour
-          m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0);
-          break;
-        case 2: // Decrement minute
-          m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0);
-          break;
-        case 3: // Decrement day
-          m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0);
-          break;
-        case 4: // Decrement month
-          AdjustMonth(-1);
-          break;
-        case 5: // Decrement year
-          AdjustYear(-1);
-          break;
-      }
-    }
-  }
-}
-
-void WeekViewScreen::LeftButtonLongPressHandler()
-{
-  if (!IsInCalib()) 
-  {
-    m_bIsInCityCalib = true;
-    m_cityIt = CITY_MAP.find(m_currentCity);
-    if(m_cityIt == CITY_MAP.end()) { // If not found, start at beginning
-        m_cityIt = CITY_MAP.begin();
-    }
-    m_currentCity = m_cityIt->first;
-    UpdateCity(m_calibBgColor);
-  }
-}
-
-bool WeekViewScreen::IsInCalib()
-{
-  return m_bIsInDateTimeCalib || m_bIsInCityCalib;
-}
-
 
 void WeekViewScreen::UpdateCurrHebdate(std::vector<String> curr_hebdate_)
 {
@@ -285,23 +89,20 @@ void WeekViewScreen::UpdateStandardTime(std::vector<String> standardtime_, uint3
 
 void WeekViewScreen::UpdateCity(uint32_t cityBg)
 {
-  int spaceIndex = m_currentCity.indexOf(' '); // Check for space in the string
-  
-  if (spaceIndex != -1) { // If space exists
-    // Split into two parts
-    String firstPart = m_currentCity.substring(0, spaceIndex);
-    String secondPart = m_currentCity.substring(spaceIndex + 1);
+  String city = m_logic.GetCurrentCity();
+  int spaceIndex = city.indexOf(' '); // Check for space in the string
 
-    // First line (original position)
+  if (spaceIndex != -1) {
+    String firstPart = city.substring(0, spaceIndex);
+    String secondPart = city.substring(spaceIndex + 1);
+
     WriteString(StringObj(firstPart, 58, 3, 57, 35, Rubik_Light20), m_fex, cityBg);
-    
-    // Second line (one row below - adjust Y position based on font height)
     WriteString(StringObj(secondPart, 58, 18, 0, 0, Rubik_Light20), m_fex, cityBg);
-  } else { 
-    // No space - original single-line implementation
-    WriteString(StringObj(m_currentCity, 58, 3, 57, 35, Rubik_Light20), m_fex, cityBg);
+  } else {
+    WriteString(StringObj(city, 58, 3, 57, 35, Rubik_Light20), m_fex, cityBg);
   }
 }
+
 
 void WeekViewScreen::UpdateHebdates(std::vector<String> hebdates_)
 {
@@ -489,47 +290,4 @@ void WeekViewScreen::TFTInitUIFrame(void)
   WriteString(StringObj("זמנית", TFT_WIDTH - 2, 15, 10, 10, Rubik_Light10), m_fex);
 }
 
-void WeekViewScreen::AdjustMonth(int delta) 
-{
-  uint16_t year = m_tempDateTime.year();
-  uint8_t month = m_tempDateTime.month() + delta;
-  uint8_t day = m_tempDateTime.day();
 
-  // Handle overflow/underflow
-  if (delta > 0) {
-  while (month > 12) { month -= 12; year++; }
-  } else {
-  while (month < 1) { month += 12; year--; }
-  }
-
-  // Clamp day to the new month's maximum
-  uint8_t maxDay = DaysInGivenMonth(year, month);
-  if (day > maxDay) day = maxDay;
-
-  m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
-}
-
-void WeekViewScreen::AdjustYear(int delta) 
-{
-  uint16_t year = m_tempDateTime.year() + delta;
-  uint8_t month = m_tempDateTime.month();
-  uint8_t day = m_tempDateTime.day();
-
-  // Clamp day to the new year's February
-  uint8_t maxDay = DaysInGivenMonth(year, month);
-  if (day > maxDay) day = maxDay;
-
-  m_tempDateTime = DateTime(year, month, day, m_tempDateTime.hour(), m_tempDateTime.minute(), m_tempDateTime.second());
-}
-
-// Include DaysInGivenMonth and IsLeapYear from earlier if not already present
-uint8_t WeekViewScreen::DaysInGivenMonth(uint16_t year, uint8_t month) 
-{
-  static const uint8_t days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-  return (month == 2 && IsLeapYear(year)) ? 29 : days[month - 1];
-}
-
-bool WeekViewScreen::IsLeapYear(uint16_t year) 
-{
-  return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-}
