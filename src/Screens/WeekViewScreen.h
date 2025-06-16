@@ -62,4 +62,7 @@ private:
 
     std::vector<String> SplitStringBySpace(const String& input);
     std::vector<DateTime> GetWeekDatetimeFromCurrentDay(DateTime current);
+    std::vector<String> GetHebrewDatesForWeek(const std::vector<ZmanimData>& zmanimWeek);
+    std::vector<String> GetJulDatesForWeek(const std::vector<DateTime>& weekDatetime);
+
 };

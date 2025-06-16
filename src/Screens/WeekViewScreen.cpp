@@ -72,26 +72,51 @@ std::vector<DateTime> WeekViewScreen::GetWeekDatetimeFromCurrentDay(DateTime cur
 
 void WeekViewScreen::Loop()
 {
-    m_weekLogic.OnLoop();
-    
-    m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
+  m_weekLogic.OnLoop();
+  
+  m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
+  
+  DateTime current = m_weekLogic.IsInDateTimeCalib() ? m_weekLogic.GetTempDateTime() : m_weekLogic.GetCurrentDateTime();
+  std::vector<DateTime> weekDatetime = GetWeekDatetimeFromCurrentDay(current);
+  String currentHebDate = m_zmanimLogic.GetHebDate(current);
+  
+  UpdateCalibrationLogic();
+  
+  UpdateStandardTime({ToString(current.hour()), ToString(current.minute())}, m_hourBg, m_minuteBg, current.second());
+  UpdateCurrJuldate({ToString(current.day()), ToString(current.month()), ToString(current.year())}, m_dayBg, m_monthBg, m_yearBg);
+  
+  if (!m_weekLogic.IsInCalib()) {
+    std::vector<ZmanimData> zmanimWeek = m_zmanimLogic.GetZmanimForRange(weekDatetime, m_weekLogic.GetCurrentCityCoord());
+    UpdateHebdates(GetHebrewDatesForWeek(zmanimWeek));
+    UpdateJuldates(GetJulDatesForWeek(weekDatetime));
+  }
 
-    DateTime current = m_weekLogic.IsInDateTimeCalib() ? m_weekLogic.GetTempDateTime() : m_weekLogic.GetCurrentDateTime();
-    
-    std::vector<DateTime> weekDatetime = GetWeekDatetimeFromCurrentDay(current);
+  if(currentHebDate != m_hebrewDate){
+    m_hebrewDate = currentHebDate;
+    UpdateCurrHebdate(SplitStringBySpace(m_hebrewDate));
+  }
+}
 
-    ZmanimData zmanimData = m_zmanimLogic.GetZmanim(current);
-    std::vector<ZmanimData> zmanimWeek = m_zmanimLogic.GetZmanimForRange(weekDatetime);
-    
-    UpdateCalibrationLogic();
-    
-    UpdateStandardTime({ToString(current.hour()), ToString(current.minute())}, m_hourBg, m_minuteBg, current.second());
-    UpdateCurrJuldate({ToString(current.day()), ToString(current.month()), ToString(current.year())}, m_dayBg, m_monthBg, m_yearBg);
-    
-    if(zmanimData.hebrewDate != m_hebrewDate){
-      m_hebrewDate = zmanimData.hebrewDate;
-      UpdateCurrHebdate(SplitStringBySpace(m_hebrewDate));
+std::vector<String> WeekViewScreen::GetJulDatesForWeek(const std::vector<DateTime>& weekDatetime){
+    std::vector<String> julDates;
+    julDates.reserve(weekDatetime.size());
+
+    for (const auto& date : weekDatetime) {
+        julDates.push_back(ToString(date.day()));
     }
+
+    return julDates;
+}
+std::vector<String> WeekViewScreen::GetHebrewDatesForWeek(const std::vector<ZmanimData>& zmanimWeek)
+{
+    std::vector<String> hebrewDates;
+    hebrewDates.reserve(zmanimWeek.size());
+
+    for (const auto& zmanim : zmanimWeek) {
+        hebrewDates.push_back(SplitStringBySpace(zmanim.hebrewDate)[0]);
+    }
+
+    return hebrewDates;
 }
 
 void WeekViewScreen::UpdateCalibrationLogic()

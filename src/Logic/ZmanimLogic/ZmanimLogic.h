@@ -19,12 +19,11 @@ class ZmanimLogic
 public:
     ZmanimLogic();
 
-    ZmanimData GetZmanim(DateTime datetime);
-    std::vector<ZmanimData> GetZmanimForRange(const std::vector<DateTime>& datetime);
-
-private:    
+    ZmanimData GetZmanim(DateTime datetime, CityCoord coords);
+    std::vector<ZmanimData> GetZmanimForRange(std::vector<DateTime> datetime, CityCoord coords);
     String GetHebDate(DateTime datetime);
 
+private:    
     char* FormatTime(hdate date);
     hdate DateTimeToHebDate(DateTime datetime);
 

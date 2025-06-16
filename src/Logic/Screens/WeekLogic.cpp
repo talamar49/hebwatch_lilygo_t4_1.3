@@ -30,26 +30,17 @@ WeekLogic::WeekLogic(TopicServer& topicServer)
     m_topicServer.Subscribe("MiddleButtonShortPressTopic", [this]() {
         OnMiddleButtonShortPress();
     });
+    m_topicServer.Subscribe("MiddleButtonLongPressTopic", [this]() {
+        OnMiddleButtonLongPress();
+    });
     m_topicServer.Subscribe("RightButtonIncTopic", [this]() {
         if (m_bIsInDateTimeCalib) {
-            switch (m_timeAndDateCalibIndex) {
-                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0); break;
-                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0); break;
-                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0); break;
-                case 4: AdjustMonth(1); break;
-                case 5: AdjustYear(1); break;
-            }
+            AdjustDateTimeByIndex(m_timeAndDateCalibIndex, 1);
         }
     });
     m_topicServer.Subscribe("LeftButtonIncTopic", [this]() {
         if (m_bIsInDateTimeCalib) {
-            switch (m_timeAndDateCalibIndex) {
-                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0); break;
-                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0); break;
-                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0); break;
-                case 4: AdjustMonth(-1); break;
-                case 5: AdjustYear(-1); break;
-            }
+            AdjustDateTimeByIndex(m_timeAndDateCalibIndex, -1);
         }
     });
 }
@@ -76,7 +67,14 @@ void WeekLogic::OnMiddleButtonShortPress() {
     }
 }
 
-void WeekLogic::OnMiddleButtonLongPress() {}
+void WeekLogic::OnMiddleButtonLongPress() {
+    if (m_bIsInDateTimeCalib) {
+        m_bIsInDateTimeCalib = false;
+        m_timeAndDateCalibIndex = 0;
+    } else if (m_bIsInCityCalib) {
+        m_bIsInCityCalib = false;
+    }
+}
 
 void WeekLogic::OnRightButtonShortPress() {
     if (IsInCalib()) {
@@ -84,15 +82,9 @@ void WeekLogic::OnRightButtonShortPress() {
             if (++m_cityIt == CITY_MAP.end()) m_cityIt = CITY_MAP.begin();
             m_currentCity = m_cityIt->first;
             m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_cityIt->second);
-        } else if (m_bIsInDateTimeCalib) {
-            switch (m_timeAndDateCalibIndex) {
-                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0); break;
-                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0); break;
-                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0); break;
-                case 4: AdjustMonth(1); break;
-                case 5: AdjustYear(1); break;
-            }
         }
+        else if(m_bIsInDateTimeCalib)
+        AdjustDateTimeByIndex(m_timeAndDateCalibIndex, 1);
     }
 }
 
@@ -111,14 +103,10 @@ void WeekLogic::OnLeftButtonShortPress() {
             --m_cityIt;
             m_currentCity = m_cityIt->first;
             m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_cityIt->second);
-        } else if (m_bIsInDateTimeCalib) {
-            switch (m_timeAndDateCalibIndex) {
-                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0); break;
-                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0); break;
-                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0); break;
-                case 4: AdjustMonth(-1); break;
-                case 5: AdjustYear(-1); break;
-            }
+        } 
+        else if (m_bIsInDateTimeCalib) 
+        {
+            AdjustDateTimeByIndex(m_timeAndDateCalibIndex, -1);
         }
     }
 }
@@ -160,6 +148,16 @@ void WeekLogic::SaveCityToEEPROM(const String& city) {
     EEPROM.write(EEPROM_CITY_ADDR, city.length());
     for (int i = 0; i < city.length(); i++) EEPROM.write(EEPROM_CITY_ADDR + 1 + i, city[i]);
     EEPROM.commit();
+}
+
+void WeekLogic::AdjustDateTimeByIndex(int index, int delta) {
+    switch (index) {
+        case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, delta, 0, 0); break;
+        case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, delta, 0); break;
+        case 3: m_tempDateTime = m_tempDateTime + TimeSpan(delta, 0, 0, 0); break;
+        case 4: AdjustMonth(delta); break;
+        case 5: AdjustYear(delta); break;
+    }
 }
 
 void WeekLogic::AdjustMonth(int delta) {

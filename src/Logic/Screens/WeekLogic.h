@@ -53,4 +53,5 @@ private:
     void AdjustYear(int delta);
     uint8_t DaysInGivenMonth(uint16_t year, uint8_t month);
     bool IsLeapYear(uint16_t year);
+    void AdjustDateTimeByIndex(int index, int delta);
 };
