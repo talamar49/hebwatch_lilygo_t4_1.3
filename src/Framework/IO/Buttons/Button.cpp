@@ -54,6 +54,11 @@ void ButtonCheckIsPressed() {
             buttonData.m_topicServer->Publish("LeftButtonLongPressTopic"); // Long press
             buttonData.leftLongPressHandled = true; // Mark long press as handled
         }
+
+        if(currentTime - buttonData.leftPressStartTime >= buttonData.IncPressDuration)
+        {
+            buttonData.m_topicServer->Publish("LeftButtonIncTopic"); // Long press
+        }
     } else if (buttonData.leftPressStartTime != 0 && !buttonData.leftLongPressHandled) {
         buttonData.m_topicServer->Publish("LeftButtonShortPressTopic"); // Short press
         buttonData.leftPressStartTime = 0; // Reset the timer
@@ -72,10 +77,17 @@ void ButtonCheckIsPressed() {
 
     // Check right button
     if (buttonData.rightPressed) {
+        
         if (currentTime - buttonData.rightPressStartTime >= buttonData.longPressDuration && !buttonData.rightLongPressHandled) {
             buttonData.m_topicServer->Publish("RightButtonLongPressTopic"); // Long press
             buttonData.rightLongPressHandled = true; // Mark long press as handled
         }
+        
+        if(currentTime - buttonData.rightPressStartTime >= buttonData.IncPressDuration)
+        {
+            buttonData.m_topicServer->Publish("RightButtonIncTopic"); // Long press
+        }
+
     } else if (buttonData.rightPressStartTime != 0 && !buttonData.rightLongPressHandled) {
         buttonData.m_topicServer->Publish("RightButtonShortPressTopic"); // Short press
         buttonData.rightPressStartTime = 0; // Reset the timer

@@ -5,6 +5,7 @@
 struct ButtonData
 {
     const unsigned long longPressDuration = 1000; // Long press duration in milliseconds 
+    const unsigned long IncPressDuration = 2000; // Long press duration in milliseconds 
     TopicServer* m_topicServer;
     const int rightButtonPin = 39; 
     const int middleButtonPin = 37;

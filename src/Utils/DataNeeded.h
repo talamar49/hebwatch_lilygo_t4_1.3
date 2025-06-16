@@ -8,17 +8,11 @@ struct CityCoord {
     float elevation; // Added elevation to the CityCoord struct
 };
 
+
 // Define ZmanimData structure to hold all calculated zmanim and Hebrew calendar info
 struct ZmanimData {
-    // Julian Date and Time
-    String julianDate; // e.g., "00/00/0000"
-    String julianTime; // e.g., "00:00"
-
     // Hebrew Date
-    String hebrewDateFull; // e.g., "כה ניסן תשגד"
-    String hebrewDay;      // e.g., "כה"
-    String hebrewMonth;    // e.g., "ניסן"
-    String hebrewYear;     // e.g., "תשגד"
+    String hebrewDate;
 
     // Parasha and special days
     String parasha;

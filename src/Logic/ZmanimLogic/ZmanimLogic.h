@@ -1,29 +1,33 @@
 #pragma once
 #include <RTClib.h>
 
+#include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
+
 #include <hebrewcalendar.h>
 #include <zmanim.h>
 #include <hdateformat.h>
 #include <shuir.h>
 
+#include "Utils/DataNeeded.h"
 #include "Framework/Data/TopicServer.h"
 
 class ZmanimLogic
 {
 public:
-    ZmanimLogic(TopicServer &topicServer);
-    void MainLogic();
+    ZmanimLogic();
 
-private:
+    ZmanimData GetZmanim(DateTime datetime);
+    std::vector<ZmanimData> GetZmanimForRange(const std::vector<DateTime>& datetime);
+
+private:    
+    String GetHebDate(DateTime datetime);
 
     char* FormatTime(hdate date);
-    struct tm DateTimeToStTm(DateTime& datetime);
+    hdate DateTimeToHebDate(DateTime datetime);
 
-    TopicServer &m_topicServer;
-    DateTime m_dateTime;
     location m_location;
+    hdate m_habrewDate;
 };

@@ -30,9 +30,34 @@ WeekLogic::WeekLogic(TopicServer& topicServer)
     m_topicServer.Subscribe("MiddleButtonShortPressTopic", [this]() {
         OnMiddleButtonShortPress();
     });
+    m_topicServer.Subscribe("RightButtonIncTopic", [this]() {
+        if (m_bIsInDateTimeCalib) {
+            switch (m_timeAndDateCalibIndex) {
+                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, 1, 0, 0); break;
+                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, 1, 0); break;
+                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(1, 0, 0, 0); break;
+                case 4: AdjustMonth(1); break;
+                case 5: AdjustYear(1); break;
+            }
+        }
+    });
+    m_topicServer.Subscribe("LeftButtonIncTopic", [this]() {
+        if (m_bIsInDateTimeCalib) {
+            switch (m_timeAndDateCalibIndex) {
+                case 1: m_tempDateTime = m_tempDateTime + TimeSpan(0, -1, 0, 0); break;
+                case 2: m_tempDateTime = m_tempDateTime + TimeSpan(0, 0, -1, 0); break;
+                case 3: m_tempDateTime = m_tempDateTime + TimeSpan(-1, 0, 0, 0); break;
+                case 4: AdjustMonth(-1); break;
+                case 5: AdjustYear(-1); break;
+            }
+        }
+    });
 }
 
-void WeekLogic::OnLoop() {}
+void WeekLogic::OnLoop()
+{
+
+}
 
 void WeekLogic::OnMiddleButtonShortPress() {
     if (m_bIsInCityCalib) {
@@ -149,8 +174,10 @@ void WeekLogic::AdjustMonth(int delta) {
 }
 
 void WeekLogic::AdjustYear(int delta) {
-    uint16_t year = m_tempDateTime.year() + delta;
-    uint8_t month = m_tempDateTime.month();
+    int year = static_cast<int>(m_tempDateTime.year()) + delta;
+    if (year < 2000) year = 2000;
+    if (year > 2255) year = 2255;
+    uint8_t month = m_tempDateTime.month();     
     uint8_t day = m_tempDateTime.day();
     uint8_t maxDay = DaysInGivenMonth(year, month);
     if (day > maxDay) day = maxDay;
@@ -165,3 +192,4 @@ uint8_t WeekLogic::DaysInGivenMonth(uint16_t year, uint8_t month) {
 bool WeekLogic::IsLeapYear(uint16_t year) {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
+

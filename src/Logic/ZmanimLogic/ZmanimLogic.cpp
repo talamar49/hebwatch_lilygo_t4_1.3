@@ -1,24 +1,22 @@
 #include "ZmanimLogic.h"
 
-ZmanimLogic::ZmanimLogic(TopicServer &topicServer): m_topicServer(topicServer)
+ZmanimLogic::ZmanimLogic()
 {
-    m_topicServer.Subscribe<DateTime>("DateTimeTopic", [this](DateTime now) {
-        m_dateTime = now;
-    });
+    std::cout <<"build" <<std::endl;
 }
 
-struct tm ZmanimLogic::DateTimeToStTm(DateTime& datetime)
+hdate ZmanimLogic::DateTimeToHebDate(DateTime datetime)
 {
     struct tm timeinfo;
-    timeinfo.tm_year = m_dateTime.year() - 1900;
-    timeinfo.tm_mon  = m_dateTime.month() - 1;    
-    timeinfo.tm_mday = m_dateTime.day();          
-    timeinfo.tm_hour = m_dateTime.hour();         
-    timeinfo.tm_min  = m_dateTime.minute();       
-    timeinfo.tm_sec  = m_dateTime.second();       
+    timeinfo.tm_year = datetime.year() - 1900;
+    timeinfo.tm_mon  = datetime.month() - 1;    
+    timeinfo.tm_mday = datetime.day();          
+    timeinfo.tm_hour = datetime.hour();         
+    timeinfo.tm_min  = datetime.minute();       
+    timeinfo.tm_sec  = datetime.second();       
     timeinfo.tm_isdst = 0;
 
-    return timeinfo;
+    return convertDate(timeinfo);
 }
 
 char* ZmanimLogic::FormatTime(hdate date)
@@ -31,14 +29,34 @@ char* ZmanimLogic::FormatTime(hdate date)
 	return final;
 }
 
-void ZmanimLogic::MainLogic()
+String ZmanimLogic::GetHebDate(DateTime datetime)
 {
-    hdate hebrewDate = convertDate(DateTimeToStTm(m_dateTime));
-    hebrewDate.offset = 0;
-    setEY(&hebrewDate, 1);
+    hdate habrewDate = DateTimeToHebDate(datetime);
+    setEY(&habrewDate, 1);
 
     char today[32] = {"\0"};
-	hdateformat(today, 32, hebrewDate);
+    hdateformat(today, 32, habrewDate);
 
-	std::cout << "tdaslfkj" << std::endl;
+    return String(today);
+}
+
+
+ZmanimData ZmanimLogic::GetZmanim(DateTime datetime)
+{
+    ZmanimData zmanimData;
+
+    zmanimData.hebrewDate = GetHebDate(datetime);
+
+    return zmanimData;
+}
+
+std::vector<ZmanimData> ZmanimLogic::GetZmanimForRange(const std::vector<DateTime>& datetime)
+{
+    std::vector<ZmanimData> zmanimVec;
+
+    // for (int i = 0; i < 7; ++i) {
+    //     zmanimVec[i].hebrewDate = GetHebDate(datetime[i]);
+    // }
+    
+    return zmanimVec;
 }

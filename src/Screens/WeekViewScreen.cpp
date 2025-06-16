@@ -11,52 +11,94 @@ WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_
       m_julYear_sprite(&m_tft),
       m_standardTime_sprite(&m_tft),
       m_zmanim_sprite(&m_tft),
-      m_logic(topicServer_)
+      m_delim_sprite(&m_tft),
+      m_weekLogic(topicServer_)
 {
   m_topicServer.Subscribe<CityCoord>("SelectedCityCoordsTopic", [this](CityCoord cityCoord) {
     uint32_t cityBg = 0; 
     
-    if(m_logic.IsInCityCalib())
+    if(m_weekLogic.IsInCityCalib())
     {
       cityBg = m_calibBgColor;
     }
 
     UpdateCity(cityBg);
   });
-
-  m_topicServer.Subscribe<ZmanimData>("ZmanimDataTopic", [this](ZmanimData zmanim) {
-    std::cout << zmanim.sunrise << std::endl;
-  });
 }
 
+std::vector<String> WeekViewScreen::SplitStringBySpace(const String& input) {
+  std::vector<String> result;
+  int start = 0;
+  int end = input.indexOf(' ');
+
+  while (end != -1) {
+      result.push_back(input.substring(start, end));
+      start = end + 1;
+      end = input.indexOf(' ', start);
+  }
+
+  // Add the last word
+  result.push_back(input.substring(start));
+
+  return result;
+}
 void WeekViewScreen::Render()
 {
     m_tft.setTextColor(m_textColor, m_bgColor);
     m_tft.fillScreen(m_bgColor);
     TFTInitUIFrame();
     TFTInitContent();
-    m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_logic.GetCurrentCityCoord());
+    m_topicServer.Publish<CityCoord>("SelectedCityCoordsTopic", m_weekLogic.GetCurrentCityCoord());
+}
+
+std::vector<DateTime> WeekViewScreen::GetWeekDatetimeFromCurrentDay(DateTime current)
+{    
+  std::vector<DateTime> week;
+
+  // Get day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+  uint8_t currentDayOfWeek = current.dayOfTheWeek();  // 0-6
+
+  // Calculate the date of Sunday (start of the week)
+  DateTime startOfWeek = current - TimeSpan(currentDayOfWeek * 86400); // 86400 seconds in a day
+
+  // Add 7 days to the vector starting from Sunday
+  for (int i = 0; i < 7; ++i) {
+      week.push_back(startOfWeek + TimeSpan(i * 86400));
+  }
+
+  return week;
+
 }
 
 void WeekViewScreen::Loop()
 {
-    m_logic.OnLoop();
+    m_weekLogic.OnLoop();
     
     m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
 
-    DateTime current = m_logic.IsInDateTimeCalib() ? m_logic.GetTempDateTime() : m_logic.GetCurrentDateTime();
+    DateTime current = m_weekLogic.IsInDateTimeCalib() ? m_weekLogic.GetTempDateTime() : m_weekLogic.GetCurrentDateTime();
+    
+    std::vector<DateTime> weekDatetime = GetWeekDatetimeFromCurrentDay(current);
 
+    ZmanimData zmanimData = m_zmanimLogic.GetZmanim(current);
+    std::vector<ZmanimData> zmanimWeek = m_zmanimLogic.GetZmanimForRange(weekDatetime);
+    
     UpdateCalibrationLogic();
-
-    UpdateStandardTime({ToString(current.hour()), ToString(current.minute())}, m_hourBg, m_minuteBg);
+    
+    UpdateStandardTime({ToString(current.hour()), ToString(current.minute())}, m_hourBg, m_minuteBg, current.second());
     UpdateCurrJuldate({ToString(current.day()), ToString(current.month()), ToString(current.year())}, m_dayBg, m_monthBg, m_yearBg);
+    
+    if(zmanimData.hebrewDate != m_hebrewDate){
+      m_hebrewDate = zmanimData.hebrewDate;
+      UpdateCurrHebdate(SplitStringBySpace(m_hebrewDate));
+    }
 }
 
 void WeekViewScreen::UpdateCalibrationLogic()
 {
   
-  if (m_logic.IsInDateTimeCalib()) {
-      switch (m_logic.GetCalibIndex()) {
+  if (m_weekLogic.IsInDateTimeCalib()) {
+      switch (m_weekLogic.GetCalibIndex()) {
           case 1: m_hourBg = m_calibBgColor; break;
           case 2: m_minuteBg = m_calibBgColor; break;
           case 3: m_dayBg = m_calibBgColor; break;
@@ -85,15 +127,26 @@ void WeekViewScreen::UpdateHebtime(const String &hebtime_)
 }
 
 
-void WeekViewScreen::UpdateStandardTime(std::vector<String> standardtime_, uint32_t hourBg, uint32_t minuteBg) 
+void WeekViewScreen::UpdateStandardTime(std::vector<String> standardtime_, uint32_t hourBg, uint32_t minuteBg, uint8_t currSeconds) 
 {
+  static uint8_t lastSecond = 0;
+  static bool showColon = true;
+
   WriteSpriteString(StringObj(standardtime_[0], 70, 5, 32, 18, Rubik_Light26), m_julTime_sprite, hourBg);
   WriteSpriteString(StringObj(standardtime_[1], 106, 5, 32, 18, Rubik_Light26), m_julTime_sprite, minuteBg);
+  
+  if(currSeconds != lastSecond)
+  {
+    showColon = !showColon;
+    String delim = showColon ? ":" : " ";
+    WriteSpriteString(StringObj(delim, 101, 5, 5, 18, Rubik_Light26), m_delim_sprite);
+    lastSecond = currSeconds;
+  }
 }
 
 void WeekViewScreen::UpdateCity(uint32_t cityBg)
 {
-  String city = m_logic.GetCurrentCity();
+  String city = m_weekLogic.GetCurrentCity();
   int spaceIndex = city.indexOf(' '); // Check for space in the string
 
   if (spaceIndex != -1) {

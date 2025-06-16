@@ -10,13 +10,11 @@
 #include "Screens/WeekViewScreen.h"
 #include "Screens/SettingsScreen.h"
 #include "Utils/DataNeeded.h"
-#include "Logic/ZmanimLogic/ZmanimLogic.h"
 
 TFT_eSPI g_tft = TFT_eSPI();
 TopicServer g_topicServer;
-ZmanimLogic zmanimLogic(g_topicServer);
 
-void IOCheck();
+void IOHandler();
 
 void setup() 
 {
@@ -35,14 +33,14 @@ void loop()
   static WeekViewScreen weekViewScreen(g_tft, g_topicServer);
   static ScreenManager screenManager(&weekViewScreen);
 
-  IOCheck();
+  IOHandler();
   
-  zmanimLogic.MainLogic();
   screenManager.Loop();
+
   delay(50);
 }
 
-void IOCheck()
+void IOHandler()
 {
   ButtonCheckIsPressed();
   RTCPublishData();

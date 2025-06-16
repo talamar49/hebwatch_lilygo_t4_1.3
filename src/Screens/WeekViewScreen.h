@@ -9,6 +9,8 @@
 #include "Utils/DataNeeded.h"
 #include "Framework/Screen/IScreen.h"
 #include "Logic/Screens/WeekLogic.h"
+#include "Logic/ZmanimLogic/ZmanimLogic.h"
+
 
 class WeekViewScreen : public IScreen 
 {
@@ -28,12 +30,14 @@ private:
     TFT_eSprite m_julTime_sprite;
     TFT_eSprite m_julDayNMonth_sprite;
     TFT_eSprite m_julYear_sprite;
+    TFT_eSprite m_delim_sprite;
     uint32_t m_calibBgColor = TFT_BROWN;
 
-    WeekLogic m_logic;
+    WeekLogic m_weekLogic;
+    ZmanimLogic m_zmanimLogic;
 
     uint32_t m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
-
+    String m_hebrewDate;
 
     void UpdateHebdates(std::vector<String> hebdates_);
     void UpdateJuldates(std::vector<String> juldates_);
@@ -46,7 +50,7 @@ private:
     void UpdateShabat(const String shabat_start_, String shabat_end_, String shabat_tam_);
     void UpdateCurrHebdate(std::vector<String> curr_hebdate_);
     void UpdateCurrJuldate(std::vector<String> curr_juldate_, uint32_t dayBg = 0, uint32_t monthBg = 0, uint32_t yearBg = 0);
-    void UpdateStandardTime(std::vector<String> standardtime_, uint32_t hourBg = 0, uint32_t minuteBg = 0);
+    void UpdateStandardTime(std::vector<String> standardtime_, uint32_t hourBg = 0, uint32_t minuteBg = 0, uint8_t currSeconds = 0);
     void UpdateHebtime(const String &hebtime_);
     void UpdateCity(uint32_t cityBg = 0);
     void UpdateParasha(const String &parash_);
@@ -55,4 +59,7 @@ private:
 
     void TFTInitContent();
     void TFTInitUIFrame();
+
+    std::vector<String> SplitStringBySpace(const String& input);
+    std::vector<DateTime> GetWeekDatetimeFromCurrentDay(DateTime current);
 };
