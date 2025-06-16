@@ -23,6 +23,10 @@ WeekViewScreen::WeekViewScreen(TFT_eSPI tft_, TopicServer& topicServer_, uint32_
 
     UpdateCity(cityBg);
   });
+
+  m_topicServer.Subscribe<ZmanimData>("ZmanimDataTopic", [this](ZmanimData zmanim) {
+    std::cout << zmanim.sunrise << std::endl;
+  });
 }
 
 void WeekViewScreen::Render()
@@ -39,7 +43,7 @@ void WeekViewScreen::Loop()
     m_logic.OnLoop();
     
     m_hourBg = 0, m_minuteBg = 0, m_dayBg = 0, m_monthBg = 0, m_yearBg = 0;
-    
+
     DateTime current = m_logic.IsInDateTimeCalib() ? m_logic.GetTempDateTime() : m_logic.GetCurrentDateTime();
 
     UpdateCalibrationLogic();
